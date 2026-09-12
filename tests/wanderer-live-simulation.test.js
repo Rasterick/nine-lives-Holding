@@ -43,27 +43,36 @@ if (!j215758 || j215758.signature !== 'SGE' || j215758.class !== 'C4' || j215758
   throw new Error(`J215758 incorrect: ${JSON.stringify(j215758)}`);
 }
 
-// Verify Mercomesier (WVR, Lowsec, 3 pilots)
+// Verify Mercomesier (WVR, Lowsec(0.1), 3 pilots)
 const mercom = records.find(r => r.system === 'Mercomesier');
-if (!mercom || mercom.signature !== 'WVR' || mercom.class !== 'Lowsec' || mercom.pilots !== '3') {
+if (!mercom || mercom.signature !== 'WVR' || mercom.class !== 'Lowsec(0.1)' || mercom.pilots !== '3') {
   throw new Error(`Mercomesier incorrect: ${JSON.stringify(mercom)}`);
 }
 
-// Verify Apanake (0.5 security -> Highsec)
+// Verify Apanake (0.5 security -> Highsec(0.5))
 const apanake = records.find(r => r.system === 'Apanake');
-if (!apanake || apanake.signature !== '-' || apanake.class !== 'Highsec') {
+if (!apanake || apanake.signature !== '-' || apanake.class !== 'Highsec(0.5)') {
   throw new Error(`Apanake incorrect: ${JSON.stringify(apanake)}`);
 }
 
-// Verify Pakhshi and Kassigainen (0.8 and 0.9 security -> Highsec)
+// Verify Pakhshi and Kassigainen (0.8 and 0.9 security -> Highsec(0.8) and Highsec(0.9))
 const pakhshi = records.find(r => r.system === 'Pakhshi');
-if (!pakhshi || pakhshi.class !== 'Highsec') {
+if (!pakhshi || pakhshi.class !== 'Highsec(0.8)') {
   throw new Error(`Pakhshi incorrect: ${JSON.stringify(pakhshi)}`);
 }
 
 const kass = records.find(r => r.system === 'Kassigainen');
-if (!kass || kass.class !== 'Highsec') {
+if (!kass || kass.class !== 'Highsec(0.9)') {
   throw new Error(`Kassigainen incorrect: ${JSON.stringify(kass)}`);
+}
+
+// Verify Statics vs Tags separation on J215758 and J101020
+if (j215758.tags !== 'PG' || j215758.statics !== 'C3, C5') {
+  throw new Error(`J215758 statics/tags separation incorrect: ${JSON.stringify(j215758)}`);
+}
+const j101020 = records.find(r => r.system === 'J101020');
+if (j101020.tags !== 'D1.1' || j101020.statics !== 'H') {
+  throw new Error(`J101020 statics/tags separation incorrect: ${JSON.stringify(j101020)}`);
 }
 
 // Verify all J-systems have valid signatures (or '-' for home)

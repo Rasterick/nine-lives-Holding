@@ -33,17 +33,17 @@ if (row3.system !== 'Jita' || row3.signature !== 'BMW' || row3.class !== 'Highse
 const tsv = formatTacticalData([row1, row2, row3], 'tsv');
 const lines = tsv.trim().split('\n');
 
-if (lines[0] !== 'System\tSignature\tClass\tTags\tPilots') {
+if (lines[0] !== 'System\tSignature\tClass\tTags\tStatics\tPilots') {
   throw new Error(`TSV header malformed: ${lines[0]}`);
 }
 
-// Verify row 1 line: J113907\t-\tC5\tB, C6\t4
-if (lines[1] !== 'J113907\t-\tC5\tB, C6\t4') {
+// Verify row 1 line: J113907\t-\tC5\tB\tC6\t4
+if (lines[1] !== 'J113907\t-\tC5\tB\tC6\t4') {
   throw new Error(`Row 1 TSV line incorrect: ${lines[1]}`);
 }
 
-// Verify row 2 line: 38G6-L\tORX\tNullsec\tD1.4, L\t-
-if (lines[2] !== '38G6-L\tORX\tNullsec\tD1.4, L\t-') {
+// Verify row 2 line: 38G6-L\tORX\tNullsec\tD1.4, L\t-\t
+if (lines[2] !== '38G6-L\tORX\tNullsec\tD1.4, L\t-\t') {
   throw new Error(`Row 2 TSV line incorrect: ${lines[2]}`);
 }
 
@@ -53,10 +53,13 @@ const parsedJson = JSON.parse(json);
 if (!Array.isArray(parsedJson) || parsedJson.length !== 3) {
   throw new Error('JSON format invalid');
 }
+if (parsedJson[0].statics !== 'C6' || parsedJson[0].tags !== 'B') {
+  throw new Error(`JSON Statics/Tags separation failed: ${JSON.stringify(parsedJson[0])}`);
+}
 
 // Test Markdown Table Output
 const md = formatTacticalData([row1, row2], 'markdown');
-if (!md.includes('| **J113907** | - | C5 | B, C6 | 4 |')) {
+if (!md.includes('| **J113907** | - | C5 | B | C6 | 4 |')) {
   throw new Error('Markdown table format invalid');
 }
 

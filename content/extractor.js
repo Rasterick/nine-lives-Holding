@@ -180,19 +180,50 @@ export function extractWandererSvgData() {
         }
       }
 
-      // Class: Look for C1-C6, Highsec, Lowsec, Nullsec inside THIS node container or CSS class
+      // Class: Look for Wanderer CSS Module [class*="classTitle"] or C1-C6, Highsec, Lowsec, Nullsec
       let foundClass = false;
-      for (const t of leafTokens) {
-        if (classRegex.test(t)) {
-          nodeTokens.push(t.toUpperCase().startsWith('C') ? t.toUpperCase() : t);
+      const classTitleEl = container.querySelector?.('[class*="classTitle"]');
+      if (classTitleEl) {
+        const txt = cleanToken(classTitleEl.textContent);
+        if (txt) {
+          nodeTokens.push(txt.toUpperCase().startsWith('C') ? txt.toUpperCase() : txt);
           foundClass = true;
-          break;
+        }
+      }
+      if (!foundClass) {
+        for (const t of leafTokens) {
+          if (classRegex.test(t)) {
+            nodeTokens.push(t.toUpperCase().startsWith('C') ? t.toUpperCase() : t);
+            foundClass = true;
+            break;
+          }
         }
       }
       if (!foundClass) {
         const cls = (container.className || '') + ' ' + (container.getAttribute?.('data-class') || '');
         const m = cls.match(/\b(c[1-6]|highsec|lowsec|nullsec|pochven)\b/i);
         if (m) nodeTokens.push(m[1].toUpperCase());
+      }
+
+      // Custom System Tag: Look for Wanderer CSS Module [class*="classSystemName"] (e.g. A, A1.3, PG)
+      const customTagEl = container.querySelector?.('[class*="classSystemName"]');
+      if (customTagEl) {
+        const txt = cleanToken(customTagEl.textContent);
+        if (txt && !nodeTokens.includes(txt) && txt !== sysName) {
+          nodeTokens.push(txt);
+        }
+      }
+
+      // Statics: Look for Wanderer static badges [class*="eve-wh-type-color"] (excluding classTitle)
+      const staticEls = Array.from(container.querySelectorAll?.('[class*="eve-wh-type-color"]') || [])
+        .filter(el => !el.className.includes('classTitle'));
+      const staticTokens = [];
+      for (const sEl of staticEls) {
+        const txt = cleanToken(sEl.textContent);
+        if (txt && txt !== sysName && !staticTokens.includes(txt.toUpperCase())) {
+          staticTokens.push(txt.toUpperCase());
+          nodeTokens.push(txt.toUpperCase());
+        }
       }
 
       // Pilots: Look for 1-3 digit integer inside THIS node container
@@ -203,16 +234,16 @@ export function extractWandererSvgData() {
         }
       }
 
-      // Statics & Tags: E.g. D1.1, D1.4, H, L, B, C6, PG, C3, C5, [HOME ACTIVE]
+      // Remaining Statics & Tags: E.g. D1.1, D1.4, H, L, B, C6, PG, C3, C5, [HOME ACTIVE]
       for (const t of leafTokens) {
         if (t === sysName || nodeTokens.includes(t)) continue;
-        // Match statics (D1.1, E1.4), single/double letter effects (B, L, H, N, PG), or bracketed tags
-        if (/^([A-Z]\d*(\.\d+)?|[A-Z]{1,2}|\d+\.\d+|\[.*?\])$/i.test(t)) {
+        // Match statics (D1.1, E1.4), single/double letter effects (B, L, H, N, PG), security status (-0.2, 0.5), or bracketed tags
+        if (/^([A-Z]\d*(\.\d+)?|[A-Z]{1,2}|-?\d+\.\d+|\[.*?\])$/i.test(t)) {
           nodeTokens.push(t);
         }
       }
 
-      clusters.push(Array.from(new Set(nodeTokens)).join(' | '));
+      clusters.push(nodeTokens.join(' | '));
     }
   }
 

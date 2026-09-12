@@ -9,8 +9,8 @@ A Manifest V3 Google Chrome extension that extracts EVE Online wormhole chain ma
 - **AURA Tactical HUD**: A 360px × 480px sci-fi interface with cyber cyan, emerald, amber, and crimson accents, HUD corner brackets, scanlines, and live latency metrics derived from Stitch Project `1606960690905693982`.
 - **Wanderer SVG Map Ingest**: Intelligently inspects `<svg>` vector nodes in the active Wanderer tab without needing screenshot OCR or third-party servers.
 - **Chrome Built-in AI Parser**: Uses Chrome's local `LanguageModel` Prompt API to semantically parse and classify systems with 100% on-device privacy, zero token cost, and sub-second latency.
-- **Fixed-Column TSV Guarantee**: Solves the missing-signature edge case (e.g. Home system `J113907`) by explicitly locking columns to:
-  `System \t Signature \t Class \t Tags \t Pilots`
+- **Fixed-Column TSV Guarantee**: Solves the missing-signature and statics classification edge cases (e.g. Home system `J113907`, K-Space security status `Torrinos`, multi-statics `J121347`) by explicitly locking columns to:
+  `System \t Signature \t Class \t Tags \t Statics \t Pilots`
   Columns never shift, ensuring seamless downstream parsing in your other application, spreadsheet, or database.
 - **Broad EVE System Designation Support**:
   - **J-Space**: `J######` (e.g. `J101020`, `J113907`, `J142923`, `J215758`)
