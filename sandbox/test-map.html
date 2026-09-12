@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wanderer Tactical Wormhole Map Sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #030712;
+      color: #cbd5e1;
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    header {
+      background: #091222;
+      border-bottom: 1px solid #1e293b;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge {
+      background: rgba(0, 229, 255, 0.15);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #10b981;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .test-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-test {
+      background: #0c182c;
+      border: 1px solid #00e5ff;
+      color: #00e5ff;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-test:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+    main {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #0a172e 0%, #030712 85%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    #debug-panel {
+      width: 100%;
+      max-width: 1100px;
+      margin-bottom: 16px;
+      background: rgba(9, 18, 34, 0.95);
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      display: none;
+    }
+    .map-container {
+      width: 100%;
+      max-width: 1100px;
+      height: 680px;
+      background: #050b14;
+      border: 1px solid #152945;
+      border-radius: 8px;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(0, 229, 255, 0.03);
+    }
+    svg.wanderer-map {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    /* SVG Node Aesthetics */
+    .node-box {
+      fill: #0c182c;
+      stroke: #1e3a5f;
+      stroke-width: 1.5;
+      rx: 6px;
+      transition: stroke 0.2s;
+    }
+    .node:hover .node-box {
+      stroke: #00e5ff;
+      filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4));
+    }
+    .home-node .node-box {
+      stroke: #10b981;
+      stroke-width: 2;
+    }
+    .nullsec-node .node-box {
+      stroke: #f59e0b;
+    }
+    .kspace-node .node-box {
+      stroke: #3b82f6;
+    }
+    .conn-line {
+      stroke: #1e3a5f;
+      stroke-width: 2;
+      stroke-dasharray: 4 2;
+    }
+    .sys-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      fill: #ffffff;
+    }
+    .sig-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      fill: #00e5ff;
+    }
+    .class-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      fill: #94a3b8;
+    }
+    .tags-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      fill: #64748b;
+    }
+    .pilots-badge {
+      fill: #10b981;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-weight: 700; color: #fff; letter-spacing: 1px;">WANDERER // TACTICAL CHAIN</span>
+      <span class="badge">v2.4.1 MOCK MAP</span>
+      <span class="status-pill"><span class="dot"></span> ACTIVE SIMULATION</span>
+    </div>
+    <div class="test-actions">
+      <button id="btnRunTest" class="btn-test">⚡ TEST SVG EXTRACTION</button>
+      <button id="btnToggleFormat" class="btn-test">📋 SHOW TSV DUMP</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="debug-panel">
+      <div style="color: #00e5ff; font-weight: 700; margin-bottom: 6px;">[+] EXTRACTED SYSTEM TELEMETRY (SIMULATION):</div>
+      <pre id="debug-output" style="white-space: pre-wrap; color: #94a3b8;"></pre>
+    </div>
+
+    <div class="map-container">
+      <svg id="wandererCanvas" class="wanderer-map" viewBox="0 0 1000 600">
+        <!-- Connecting Wormhole Vectors -->
+        <line x1="500" y1="280" x2="260" y2="150" class="conn-line" />
+        <line x1="500" y1="280" x2="260" y2="420" class="conn-line" />
+        <line x1="500" y1="280" x2="750" y2="140" class="conn-line" />
+        <line x1="500" y1="280" x2="750" y2="420" class="conn-line" />
+        <line x1="750" y1="140" x2="900" y2="80" class="conn-line" />
+        <line x1="750" y1="420" x2="900" y2="480" class="conn-line" />
+
+        <!-- Node 1: Home System (J113907) - Missing 3-letter sig, pilot count = 4 -->
+        <g class="node home-node" transform="translate(430, 240)">
+          <rect class="node-box" width="140" height="70" />
+          <text x="12" y="24" class="sys-title">J113907</text>
+          <text x="12" y="44" class="class-text">C5</text>
+          <text x="36" y="44" class="tags-text">B, C6</text>
+          <circle cx="120" cy="20" r="8" fill="#10b981" fill-opacity="0.2" stroke="#10b981" />
+          <text x="117" y="24" class="pilots-badge">4</text>
+          <text x="12" y="60" class="tags-text">[HOME ACTIVE]</text>
+        </g>
+
+        <!-- Node 2: Connected C1 (J101020) -->
+        <g class="node" transform="translate(190, 110)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">J101020</text>
+          <text x="88" y="24" class="sig-text">LWT</text>
+          <text x="12" y="44" class="class-text">C1</text>
+          <text x="36" y="44" class="tags-text">D1.1, H</text>
+        </g>
+
+        <!-- Node 3: Connected C4 (J142923) -->
+        <g class="node" transform="translate(190, 380)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">J142923</text>
+          <text x="88" y="24" class="sig-text">IYR</text>
+          <text x="12" y="44" class="class-text">C4</text>
+          <text x="36" y="44" class="tags-text">D1.2, C4, C6</text>
+        </g>
+
+        <!-- Node 4: Nullsec Alphanumeric Exit (38G6-L) -->
+        <g class="node nullsec-node" transform="translate(680, 100)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">38G6-L</text>
+          <text x="88" y="24" class="sig-text">ORX</text>
+          <text x="12" y="44" class="class-text">Nullsec</text>
+          <text x="68" y="44" class="tags-text">D1.4, L</text>
+        </g>
+
+        <!-- Node 5: Second Nullsec Node (N-K4Q0) -->
+        <g class="node nullsec-node" transform="translate(830, 45)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">N-K4Q0</text>
+          <text x="88" y="24" class="sig-text">EEJ</text>
+          <text x="12" y="44" class="class-text">C6</text>
+          <text x="36" y="44" class="tags-text">E1.4, C5</text>
+        </g>
+
+        <!-- Node 6: Highsec Exit (Jita) -->
+        <g class="node kspace-node" transform="translate(680, 380)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">Jita</text>
+          <text x="88" y="24" class="sig-text">BMW</text>
+          <text x="12" y="44" class="class-text">Highsec</text>
+          <text x="70" y="44" class="tags-text">The Forge</text>
+        </g>
+
+        <!-- Node 7: Thera / Deep Wormhole Hub -->
+        <g class="node" transform="translate(830, 445)">
+          <rect class="node-box" width="140" height="65" />
+          <text x="12" y="24" class="sys-title">Thera</text>
+          <text x="88" y="24" class="sig-text">SGE</text>
+          <text x="12" y="44" class="class-text">C12</text>
+          <text x="44" y="44" class="tags-text">Sisters of EVE</text>
+        </g>
+      </svg>
+    </div>
+  </main>
+
+  <script type="module" src="test-map.js"></script>
+</body>
+</html>

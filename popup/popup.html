@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NINE LIVES Tactical Extension Popup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Extension Popup Container: 360px width -->
+  <div class="extension-shell hud-corners tactical-glow scanline">
+    
+    <!-- Top Chrome & Telemetry Ribbon -->
+    <header class="telemetry-header">
+      <div class="brand-group">
+        <div class="hex-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="12 2 2 8.5 2 15.5 12 22 22 15.5 22 8.5 12 2"></polygon>
+          </svg>
+        </div>
+        <div>
+          <div class="title-row">
+            <span class="brand-title">NINE LIVES</span>
+            <span class="badge-ver">EXT v1.4</span>
+          </div>
+          <div class="node-id">AURA_TAC_NODE #0942</div>
+        </div>
+      </div>
+
+      <div class="controls-group">
+        <!-- Live Status Indicator -->
+        <div id="statusBadge" class="status-badge state-synced">
+          <span class="pulse-dot"></span>
+          <span id="statusText" class="status-label">SYNCED</span>
+        </div>
+
+        <!-- Gear / Settings Button -->
+        <button id="btnSettings" title="Tactical Settings" class="icon-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Active System Context Ribbon -->
+    <div class="system-context-ribbon">
+      <div class="system-coord">
+        <span class="label-dim">SOLAR_LOC:</span>
+        <span id="systemLoc" class="value-cyan">ACTIVE CHAIN</span>
+        <span id="systemSec" class="tag-crimson">-1.0 (W-SPACE)</span>
+      </div>
+      <div class="pilot-coord">
+        <span class="label-dim">AI_ENGINE:</span>
+        <strong id="aiEngineLabel" class="value-emerald">GEMINI NANO</strong>
+      </div>
+    </div>
+
+    <!-- Primary Tactical Action Buttons Area -->
+    <div class="actions-container">
+
+      <!-- Action 1: Get Wanderer Systems (ACTIVE & ARMED) -->
+      <button id="btnSystems" class="tactical-btn btn-active group">
+        <div class="btn-inner">
+          <div class="action-glyph glyph-cyan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="4"></circle>
+              <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
+              <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line>
+              <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line>
+              <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
+            </svg>
+          </div>
+          <div class="btn-text">
+            <div class="btn-title-row">
+              <span class="btn-title">Get Wanderer Systems</span>
+              <span class="btn-tag tag-cyan">[W-SPACE]</span>
+            </div>
+            <div class="btn-desc">
+              AI extract connected wormhole chain &amp; copy TSV
+            </div>
+          </div>
+        </div>
+        <div class="arrow-indicator">➔</div>
+        <div class="corner-dot dot-cyan"></div>
+      </button>
+
+      <!-- Action 2: Get Wanderer Scan Data (VISUALLY RENDERED, DEACTIVATED STANDBY) -->
+      <button id="btnScan" class="tactical-btn btn-deactivated" disabled title="Directional scan ingestion scheduled for Phase 2">
+        <div class="btn-inner">
+          <div class="action-glyph glyph-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path>
+            </svg>
+          </div>
+          <div class="btn-text">
+            <div class="btn-title-row">
+              <span class="btn-title">Get Wanderer Scan Data</span>
+              <span class="btn-tag tag-amber">[D-SCAN]</span>
+              <span class="standby-badge">[STANDBY]</span>
+            </div>
+            <div class="btn-desc">
+              Extract directional probes, wrecks &amp; anomalies
+            </div>
+          </div>
+        </div>
+        <div class="arrow-indicator dim-arrow">⊘</div>
+      </button>
+
+      <!-- Action 3: Get Pilots in System (VISUALLY RENDERED, DEACTIVATED STANDBY) -->
+      <button id="btnPilots" class="tactical-btn btn-deactivated" disabled title="Local pilot threat scraper scheduled for Phase 2">
+        <div class="btn-inner">
+          <div class="action-glyph glyph-emerald">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="btn-text">
+            <div class="btn-title-row">
+              <span class="btn-title">Get Pilots in System</span>
+              <span class="btn-tag tag-emerald">[LOCAL]</span>
+              <span class="standby-badge">[STANDBY]</span>
+            </div>
+            <div class="btn-desc">
+              Scrape local identities &amp; threat standings
+            </div>
+          </div>
+        </div>
+        <div class="arrow-indicator dim-arrow">⊘</div>
+      </button>
+
+    </div>
+
+    <!-- Format Selector & Clipboard Mode Ribbon -->
+    <div class="format-ribbon">
+      <span class="format-label">CLIPBOARD FORMAT:</span>
+      <div class="format-toggles">
+        <button id="fmtTsv" class="fmt-btn active" data-fmt="tsv">TSV (Default)</button>
+        <button id="fmtJson" class="fmt-btn" data-fmt="json">JSON</button>
+        <button id="fmtMd" class="fmt-btn" data-fmt="markdown">MD TABLE</button>
+      </div>
+    </div>
+
+    <!-- Mini Tactical Output / Status Feed -->
+    <div class="output-container">
+      <div class="output-header">
+        <span class="output-title">CONSOLE_RESPONSE</span>
+        <div class="output-meta">
+          <button id="btnCopyAgain" class="copy-action-btn" title="Copy to clipboard">
+            📋 COPY
+          </button>
+          <span id="timestamp" class="timestamp-text">--:--:-- UTC</span>
+        </div>
+      </div>
+      
+      <!-- Interactive Feed Box -->
+      <div id="outputBox" class="output-box">
+        <div class="status-line">
+          <span class="dot-emerald">●</span>
+          <span class="standby-text">STANDBY // AWAITING WANDERER INGEST TRIGGER</span>
+        </div>
+        <div class="standby-hint">
+          Click "Get Wanderer Systems" to extract chain topology into clipboard.
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Mini Utility Bar -->
+    <footer class="utility-bar">
+      <div class="utility-links">
+        <a id="lnkSandbox" href="#" class="util-link">
+          <span>[ TEST MAP SANDBOX ]</span>
+        </a>
+      </div>
+      <div class="latency-stat">
+        <span class="dim-text">LATENCY:</span>
+        <span id="latencyValue" class="latency-text">-- ms</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Tactical Settings Drawer Overlay -->
+  <div id="settingsDrawer" class="settings-drawer hidden">
+    <div class="drawer-header">
+      <div class="drawer-title">⚙ TACTICAL CONFIGURATION</div>
+      <button id="btnCloseSettings" class="close-btn">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="form-group">
+        <label class="form-label">ALLOWED WANDERER URL PATTERNS</label>
+        <textarea id="txtUrlPatterns" class="form-input" rows="3" placeholder="*://*wanderer*/*&#10;http://localhost:*/*"></textarea>
+        <span class="form-hint">One pattern per line (wildcards * supported). Includes localhost by default.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">DEFAULT CLIPBOARD FORMAT</label>
+        <select id="selDefaultFormat" class="form-select">
+          <option value="tsv">TSV (Tab-Separated Values) - Standard for Ingest</option>
+          <option value="json">JSON Array (Direct API / Vue Ingest)</option>
+          <option value="markdown">Markdown Table (Discord / Fleet Notes)</option>
+        </select>
+      </div>
+      <div class="form-group checkbox-row">
+        <label class="checkbox-container">
+          <input type="checkbox" id="chkAutoCopy" checked>
+          <span class="checkmark"></span>
+          <span>Auto-copy to clipboard on completion</span>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button id="btnSaveSettings" class="btn-save">SAVE CONFIGURATION</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

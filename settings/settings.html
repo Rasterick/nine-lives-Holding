@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NINE LIVES Tactical Extension - Configuration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #050b14;
+      color: #cbd5e1;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00e5ff;
+      font-size: 18px;
+      border-bottom: 1px solid #152945;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card {
+      background: #091222;
+      border: 1px solid #152945;
+      border-radius: 6px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 6px;
+      display: block;
+    }
+    textarea, select {
+      width: 100%;
+      background: #050b14;
+      border: 1px solid #1e3a5f;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      outline: none;
+    }
+    textarea:focus, select:focus {
+      border-color: #00e5ff;
+    }
+    .hint {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .btn-save {
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid #00e5ff;
+      color: #00e5ff;
+      padding: 10px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-save:hover {
+      background: rgba(0, 229, 255, 0.3);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    }
+    .status-msg {
+      color: #10b981;
+      font-size: 11px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>
+    <span>⚙ NINE LIVES CONSOLE</span>
+    <span style="font-size: 12px; color: #64748b; font-weight: normal;">// OPTIONS</span>
+  </h1>
+
+  <div class="card">
+    <div>
+      <label>AUTHORIZED WANDERER URL PATTERNS</label>
+      <textarea id="txtUrlPatterns" rows="4"></textarea>
+      <div class="hint">One URL pattern per line. Wildcards (*) supported (e.g., http://localhost:*, https://wanderer.mycorp.com/*).</div>
+    </div>
+
+    <div>
+      <label>DEFAULT CLIPBOARD EXPORT FORMAT</label>
+      <select id="selFormat">
+        <option value="tsv">TSV (Tab-Separated Values) - Standard for App Ingestion</option>
+        <option value="json">JSON (Structured Object Array)</option>
+        <option value="markdown">Markdown Table (Discord &amp; Logs)</option>
+      </select>
+    </div>
+
+    <div>
+      <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+        <input type="checkbox" id="chkAutoCopy" checked>
+        <span>Automatically copy to system clipboard after AI parsing</span>
+      </label>
+    </div>
+
+    <button id="btnSave" class="btn-save">SAVE TACTICAL CONFIGURATION</button>
+    <div id="statusMsg" class="status-msg">✔ Configuration saved successfully.</div>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>
