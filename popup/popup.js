@@ -351,6 +351,18 @@ async function handleIngestWandererSignatures() {
     }
 
     if (!extraction || !extraction.success || !extraction.signatures?.length) {
+      const dbg = extraction?.debug;
+      const dbgDetails = dbg ? `
+        <div style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.6); border: 1px solid #1e3a5f; border-radius: 4px; font-size: 8px; color: #94a3b8; line-height: 1.4;">
+          <div style="color: #f59e0b; font-weight: 700; margin-bottom: 2px;">TACTICAL DIAGNOSTIC:</div>
+          • URL: <span style="color:#cbd5e1;">${dbg.url ? dbg.url.substring(0, 45) + '...' : 'Unknown'}</span><br>
+          • Header Found: <span style="color:${dbg.headerFound ? '#10b981' : '#ef4444'}; font-weight:700;">${dbg.headerFound ? 'YES' : 'NO'}</span> ${dbg.headerTextSample ? `("${dbg.headerTextSample}")` : ''}<br>
+          • Table Headers: <span style="color:#00e5ff;">${dbg.tableHeadersSample?.join(' / ') || 'None found'}</span><br>
+          • Strategy: <span style="color:#e2e8f0;">${dbg.strategyUsed || 'None'}</span>
+          ${dbg.exception ? `<br>• Error: <span style="color:#ef4444;">${dbg.exception.substring(0, 80)}</span>` : ''}
+        </div>
+      ` : '';
+
       outputBox.innerHTML = `
         <div style="color: #f59e0b; font-weight: 700;">
           [!] NO SIGNATURES DETECTED
@@ -358,6 +370,7 @@ async function handleIngestWandererSignatures() {
         <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
           ${extraction?.message || 'Please click on a system in Wanderer to open its Signatures table, then try again.'}
         </div>
+        ${dbgDetails}
       `;
       return;
     }
