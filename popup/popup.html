@@ -91,26 +91,30 @@
         <div class="corner-dot dot-cyan"></div>
       </button>
 
-      <!-- Action 2: Get Wanderer Scan Data (VISUALLY RENDERED, DEACTIVATED STANDBY) -->
-      <button id="btnScan" class="tactical-btn btn-deactivated" disabled title="Directional scan ingestion scheduled for Phase 2">
+      <!-- Action 2: Get System Signatures (ACTIVE & ARMED) -->
+      <button id="btnSignatures" class="tactical-btn btn-active group" title="Extract active system signatures & copy to clipboard">
         <div class="btn-inner">
           <div class="action-glyph glyph-amber">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="22" y1="12" x2="18" y2="12"></line>
+              <line x1="6" y1="12" x2="2" y2="12"></line>
+              <line x1="12" y1="6" x2="12" y2="2"></line>
+              <line x1="12" y1="22" x2="12" y2="18"></line>
             </svg>
           </div>
           <div class="btn-text">
             <div class="btn-title-row">
-              <span class="btn-title">Get Wanderer Scan Data</span>
-              <span class="btn-tag tag-amber">[D-SCAN]</span>
-              <span class="standby-badge">[STANDBY]</span>
+              <span class="btn-title">Get System Signatures</span>
+              <span class="btn-tag tag-amber">[SIGS]</span>
             </div>
             <div class="btn-desc">
-              Extract directional probes, wrecks &amp; anomalies
+              Extract active system signatures &amp; copy TSV
             </div>
           </div>
         </div>
-        <div class="arrow-indicator dim-arrow">⊘</div>
+        <div class="arrow-indicator">➔</div>
+        <div class="corner-dot dot-amber"></div>
       </button>
 
       <!-- Action 3: Get Pilots in System (VISUALLY RENDERED, DEACTIVATED STANDBY) -->

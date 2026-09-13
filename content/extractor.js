@@ -1,4 +1,5 @@
 // content/extractor.js
+export { extractWandererSignatures } from './signatures-extractor.js';
 
 /**
  * Robust tactical extractor for Wanderer EVE Online map topology.

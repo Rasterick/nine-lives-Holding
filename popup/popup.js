@@ -2,11 +2,15 @@
 import { getSettings, saveSettings } from '../lib/storage.js';
 import { parseWithChromeAI, formatTacticalData } from '../lib/ai.js';
 import { extractWandererSvgData } from '../content/extractor.js';
+import { extractWandererSignatures } from '../content/signatures-extractor.js';
+import { formatSignaturesData } from '../lib/formatters.js';
 
 // State variables
 let currentTab = null;
 let isWandererTab = false;
 let parsedRecords = [];
+let parsedSignaturesData = null;
+let lastIngestType = 'systems';
 let currentFormat = 'tsv';
 let currentSettings = null;
 
@@ -17,6 +21,7 @@ const systemLoc = document.getElementById('systemLoc');
 const systemSec = document.getElementById('systemSec');
 const aiEngineLabel = document.getElementById('aiEngineLabel');
 const btnSystems = document.getElementById('btnSystems');
+const btnSignatures = document.getElementById('btnSignatures');
 const outputBox = document.getElementById('outputBox');
 const timestampEl = document.getElementById('timestamp');
 const latencyValue = document.getElementById('latencyValue');
@@ -107,6 +112,12 @@ function setSyncedState(tab) {
   btnSystems.disabled = false;
   btnSystems.classList.remove('btn-deactivated');
   btnSystems.classList.add('btn-active');
+
+  if (btnSignatures) {
+    btnSignatures.disabled = false;
+    btnSignatures.classList.remove('btn-deactivated');
+    btnSignatures.classList.add('btn-active');
+  }
 }
 
 function setOffGridState(reason) {
@@ -116,6 +127,12 @@ function setOffGridState(reason) {
 
   systemLoc.textContent = 'STANDALONE';
   systemSec.textContent = 'UNVERIFIED';
+
+  if (btnSignatures) {
+    btnSignatures.disabled = true;
+    btnSignatures.classList.add('btn-deactivated');
+    btnSignatures.classList.remove('btn-active');
+  }
 
   outputBox.innerHTML = `
     <div style="color: #ef4444; font-weight: 700; margin-bottom: 4px;">
@@ -231,6 +248,7 @@ async function handleIngestWandererSystems() {
     }
 
     // 2. Stream AI Parsing
+    lastIngestType = 'systems';
     outputBox.innerHTML = `
       <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
         <span>⚡ AURA AI: PARSING ${extraction.systemCount} SYSTEMS...</span>
@@ -294,17 +312,109 @@ async function handleIngestWandererSystems() {
   }
 }
 
+// Signatures Ingestion Action Handler
+async function handleIngestWandererSignatures() {
+  if (!currentTab?.id) {
+    alert('No active tab identified. Please navigate to Wanderer.');
+    return;
+  }
+
+  const startTime = Date.now();
+  updateTimestamp();
+
+  outputBox.innerHTML = `
+    <div style="color: #f59e0b; font-weight: 700;">
+      ◈ EXTRACTING SYSTEM SIGNATURES...
+    </div>
+    <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+      Querying open Signatures panel on active Wanderer page...
+    </div>
+  `;
+
+  try {
+    let extraction = null;
+
+    if (currentTab.url && currentTab.url.startsWith('chrome-extension://')) {
+      try {
+        extraction = await chrome.tabs.sendMessage(currentTab.id, { action: 'EXTRACT_WANDERER_SIGNATURES' });
+      } catch (e) {
+        extraction = extractWandererSignatures();
+      }
+    } else {
+      const execResults = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id, allFrames: true },
+        func: extractWandererSignatures
+      });
+
+      const successful = execResults?.find(r => r.result?.success && r.result?.signatures?.length > 0);
+      extraction = successful?.result || execResults?.[0]?.result;
+    }
+
+    if (!extraction || !extraction.success || !extraction.signatures?.length) {
+      outputBox.innerHTML = `
+        <div style="color: #f59e0b; font-weight: 700;">
+          [!] NO SIGNATURES DETECTED
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+          ${extraction?.message || 'Please click on a system in Wanderer to open its Signatures table, then try again.'}
+        </div>
+      `;
+      return;
+    }
+
+    lastIngestType = 'signatures';
+    parsedSignaturesData = extraction;
+
+    const formattedData = formatSignaturesData(extraction, currentFormat);
+    if (currentSettings?.autoCopy !== false) {
+      await copyOutputToClipboard(formattedData, true);
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (latencyValue) {
+      latencyValue.textContent = `${elapsed}ms`;
+    }
+
+    outputBox.innerHTML = `
+      <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
+        <span>[✓] ${extraction.signatures.length} SIGNATURES INGESTED</span>
+        <span style="font-size: 8px; background: rgba(245,158,11,0.2); color: #f59e0b; padding: 1px 4px; border-radius: 3px;">${extraction.system} (${extraction.class})</span>
+      </div>
+      <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${formattedData}</pre>
+    `;
+
+  } catch (err) {
+    console.error('Signatures ingestion failed:', err);
+    outputBox.innerHTML = `
+      <div style="color: #ef4444; font-weight: 700;">
+        ❌ SIGNATURES EXTRACTION FAILED
+      </div>
+      <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+        ${err.message || String(err)}
+      </div>
+    `;
+  }
+}
+
 // Event Listeners
 btnSystems.addEventListener('click', handleIngestWandererSystems);
+if (btnSignatures) {
+  btnSignatures.addEventListener('click', handleIngestWandererSignatures);
+}
 
 btnCopyAgain.addEventListener('click', async () => {
-  if (parsedRecords.length > 0) {
+  if (lastIngestType === 'signatures' && parsedSignaturesData) {
+    const text = formatSignaturesData(parsedSignaturesData, currentFormat);
+    await copyOutputToClipboard(text, true);
+    btnCopyAgain.textContent = '✔ COPIED';
+    setTimeout(() => { btnCopyAgain.textContent = '📋 COPY'; }, 1500);
+  } else if (parsedRecords.length > 0) {
     const text = formatTacticalData(parsedRecords, currentFormat);
     await copyOutputToClipboard(text, true);
     btnCopyAgain.textContent = '✔ COPIED';
     setTimeout(() => { btnCopyAgain.textContent = '📋 COPY'; }, 1500);
   } else {
-    alert('No telemetry data available to copy yet. Click "Get Wanderer Systems" first.');
+    alert('No telemetry data available to copy yet. Click an ingest button first.');
   }
 });
 
@@ -313,7 +423,16 @@ for (const [fmt, btn] of Object.entries(fmtButtons)) {
   if (btn) {
     btn.addEventListener('click', async () => {
       setActiveFormat(fmt);
-      if (parsedRecords.length > 0) {
+      if (lastIngestType === 'signatures' && parsedSignaturesData) {
+        const text = formatSignaturesData(parsedSignaturesData, fmt);
+        await copyOutputToClipboard(text, true);
+        outputBox.innerHTML = `
+          <div style="color: #00e5ff; font-weight: 700;">
+            [✓] SWITCHED FORMAT: ${fmt.toUpperCase()}
+          </div>
+          <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${text}</pre>
+        `;
+      } else if (parsedRecords.length > 0) {
         const text = formatTacticalData(parsedRecords, fmt);
         await copyOutputToClipboard(text, true);
         outputBox.innerHTML = `

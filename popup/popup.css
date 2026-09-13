@@ -409,6 +409,15 @@ body {
   box-shadow: 0 0 6px var(--aura-cyan);
 }
 
+.dot-amber {
+  background: rgba(245, 158, 11, 0.4);
+}
+
+.tactical-btn.btn-active:hover .dot-amber {
+  background: var(--aura-amber);
+  box-shadow: 0 0 6px var(--aura-amber);
+}
+
 /* Format Ribbon */
 .format-ribbon {
   padding: 6px 14px;
