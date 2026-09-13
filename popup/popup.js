@@ -3,13 +3,15 @@ import { getSettings, saveSettings } from '../lib/storage.js';
 import { parseWithChromeAI, formatTacticalData } from '../lib/ai.js';
 import { extractWandererSvgData } from '../content/extractor.js';
 import { extractWandererSignatures } from '../content/signatures-extractor.js';
-import { formatSignaturesData } from '../lib/formatters.js';
+import { extractWandererPilots } from '../content/pilots-extractor.js';
+import { formatSignaturesData, formatPilotsData } from '../lib/formatters.js';
 
 // State variables
 let currentTab = null;
 let isWandererTab = false;
 let parsedRecords = [];
 let parsedSignaturesData = null;
+let parsedPilotsData = null;
 let lastIngestType = 'systems';
 let currentFormat = 'tsv';
 let currentSettings = null;
@@ -22,6 +24,7 @@ const systemSec = document.getElementById('systemSec');
 const aiEngineLabel = document.getElementById('aiEngineLabel');
 const btnSystems = document.getElementById('btnSystems');
 const btnSignatures = document.getElementById('btnSignatures');
+const btnPilots = document.getElementById('btnPilots');
 const outputBox = document.getElementById('outputBox');
 const timestampEl = document.getElementById('timestamp');
 const latencyValue = document.getElementById('latencyValue');
@@ -409,14 +412,106 @@ async function handleIngestWandererSignatures() {
   }
 }
 
+// Local Pilots Ingestion Action Handler
+async function handleIngestWandererPilots() {
+  if (!currentTab?.id) {
+    alert('No active tab identified. Please navigate to Wanderer.');
+    return;
+  }
+
+  const startTime = Date.now();
+  updateTimestamp();
+
+  outputBox.innerHTML = `
+    <div style="color: #10b981; font-weight: 700;">
+      ◈ EXTRACTING LOCAL PILOTS...
+    </div>
+    <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+      Querying open Local roster panel on active Wanderer page...
+    </div>
+  `;
+
+  try {
+    let extraction = null;
+
+    if (currentTab.url && currentTab.url.startsWith('chrome-extension://')) {
+      try {
+        extraction = await chrome.tabs.sendMessage(currentTab.id, { action: 'EXTRACT_WANDERER_PILOTS' });
+      } catch (e) {
+        extraction = extractWandererPilots();
+      }
+    } else {
+      const execResults = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id, allFrames: true },
+        func: extractWandererPilots
+      });
+
+      const successful = execResults?.find(r => r.result?.success && r.result?.pilots?.length > 0);
+      extraction = successful?.result || execResults?.[0]?.result;
+    }
+
+    if (!extraction || !extraction.success || !extraction.pilots?.length) {
+      outputBox.innerHTML = `
+        <div style="color: #f59e0b; font-weight: 700;">
+          [!] NO LOCAL PILOTS DETECTED
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+          ${extraction?.message || 'Please ensure Wanderer has an active system with the Local roster open, then try again.'}
+        </div>
+      `;
+      return;
+    }
+
+    lastIngestType = 'pilots';
+    parsedPilotsData = extraction;
+
+    const formattedData = formatPilotsData(extraction, currentFormat);
+    if (currentSettings?.autoCopy !== false) {
+      await copyOutputToClipboard(formattedData, true);
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (latencyValue) {
+      latencyValue.textContent = `${elapsed}ms`;
+    }
+
+    outputBox.innerHTML = `
+      <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
+        <span>[✓] ${extraction.pilots.length} PILOTS INGESTED</span>
+        <span style="font-size: 8px; background: rgba(16,185,129,0.2); color: #10b981; padding: 1px 4px; border-radius: 3px;">${extraction.system} (${extraction.class})</span>
+      </div>
+      <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${formattedData}</pre>
+    `;
+
+  } catch (err) {
+    console.error('Pilots ingestion failed:', err);
+    outputBox.innerHTML = `
+      <div style="color: #ef4444; font-weight: 700;">
+        ❌ PILOTS EXTRACTION FAILED
+      </div>
+      <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+        ${err.message || String(err)}
+      </div>
+    `;
+  }
+}
+
 // Event Listeners
 btnSystems.addEventListener('click', handleIngestWandererSystems);
 if (btnSignatures) {
   btnSignatures.addEventListener('click', handleIngestWandererSignatures);
 }
+if (btnPilots) {
+  btnPilots.addEventListener('click', handleIngestWandererPilots);
+}
 
 btnCopyAgain.addEventListener('click', async () => {
-  if (lastIngestType === 'signatures' && parsedSignaturesData) {
+  if (lastIngestType === 'pilots' && parsedPilotsData) {
+    const text = formatPilotsData(parsedPilotsData, currentFormat);
+    await copyOutputToClipboard(text, true);
+    btnCopyAgain.textContent = '✔ COPIED';
+    setTimeout(() => { btnCopyAgain.textContent = '📋 COPY'; }, 1500);
+  } else if (lastIngestType === 'signatures' && parsedSignaturesData) {
     const text = formatSignaturesData(parsedSignaturesData, currentFormat);
     await copyOutputToClipboard(text, true);
     btnCopyAgain.textContent = '✔ COPIED';
@@ -436,7 +531,16 @@ for (const [fmt, btn] of Object.entries(fmtButtons)) {
   if (btn) {
     btn.addEventListener('click', async () => {
       setActiveFormat(fmt);
-      if (lastIngestType === 'signatures' && parsedSignaturesData) {
+      if (lastIngestType === 'pilots' && parsedPilotsData) {
+        const text = formatPilotsData(parsedPilotsData, fmt);
+        await copyOutputToClipboard(text, true);
+        outputBox.innerHTML = `
+          <div style="color: #00e5ff; font-weight: 700;">
+            [✓] SWITCHED FORMAT: ${fmt.toUpperCase()}
+          </div>
+          <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${text}</pre>
+        `;
+      } else if (lastIngestType === 'signatures' && parsedSignaturesData) {
         const text = formatSignaturesData(parsedSignaturesData, fmt);
         await copyOutputToClipboard(text, true);
         outputBox.innerHTML = `

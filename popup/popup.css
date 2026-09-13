@@ -418,6 +418,15 @@ body {
   box-shadow: 0 0 6px var(--aura-amber);
 }
 
+.dot-emerald {
+  background: rgba(16, 185, 129, 0.4);
+}
+
+.tactical-btn.btn-active:hover .dot-emerald {
+  background: var(--aura-emerald);
+  box-shadow: 0 0 6px var(--aura-emerald);
+}
+
 /* Format Ribbon */
 .format-ribbon {
   padding: 6px 14px;
