@@ -446,11 +446,11 @@ async function handleIngestWandererPilots() {
         func: extractWandererPilots
       });
 
-      const successful = execResults?.find(r => r.result?.success && r.result?.pilots?.length > 0);
+      const successful = execResults?.find(r => r.result?.success && (r.result?.pilots?.length > 0 || r.result?.count === 0));
       extraction = successful?.result || execResults?.[0]?.result;
     }
 
-    if (!extraction || !extraction.success || !extraction.pilots?.length) {
+    if (!extraction || !extraction.success || (!extraction.pilots?.length && extraction.count !== 0)) {
       outputBox.innerHTML = `
         <div style="color: #f59e0b; font-weight: 700;">
           [!] NO LOCAL PILOTS DETECTED
@@ -477,7 +477,7 @@ async function handleIngestWandererPilots() {
 
     outputBox.innerHTML = `
       <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
-        <span>[✓] ${extraction.pilots.length} PILOTS INGESTED</span>
+        <span>[✓] ${extraction.count === 0 ? 'LOCAL CLEAR (0 PILOTS)' : `${extraction.pilots.length} PILOTS INGESTED`}</span>
         <span style="font-size: 8px; background: rgba(16,185,129,0.2); color: #10b981; padding: 1px 4px; border-radius: 3px;">${extraction.system} (${extraction.class})</span>
       </div>
       <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${formattedData}</pre>

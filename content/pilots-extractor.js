@@ -27,7 +27,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
           const val = (n.nodeValue || '').trim();
           if (val) pieces.push(val);
         } else {
-          if (n.tagName && (n.tagName.toLowerCase() === 'svg' || (n.classList?.contains && n.classList.contains('icon')))) return;
+          if (n.tagName && (/^(svg|button)$/i.test(n.tagName) || (n.classList?.contains && n.classList.contains('icon')))) return;
           if (n.childNodes) {
             for (const child of n.childNodes) {
               walk(child);
@@ -36,7 +36,8 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         }
       }
       walk(el);
-      return pieces.join(' ').replace(/\s+/g, ' ').trim();
+      const txt = pieces.join(' ').replace(/\s+/g, ' ').trim();
+      return txt || (el.textContent || '').replace(/\s+/g, ' ').trim();
     }
 
     // Search roots: main document and any accessible iframes
@@ -51,7 +52,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     let detectedSystem = 'Unknown';
     let detectedClass = 'Unknown';
     let matchedHeaderEl = null;
-    let localCount = 0;
+    let localCount = null;
 
     // --- PHASE 1: Resolve Active System and Wormhole Class ---
     // Priority 1: Check Signatures panel if open on the same page
@@ -76,7 +77,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     // Priority 2: Check active/selected node in SVG canvas
     if (detectedSystem === 'Unknown') {
       for (const root of searchRoots) {
-        const activeNode = root.querySelector('.system-node.active, g.active, [aria-selected="true"]');
+        const activeNode = root.querySelector?.('.system-node.active, g.active, [aria-selected="true"]');
         if (activeNode) {
           const nodeText = extractCleanNodeText(activeNode);
           const jMatch = nodeText.match(/\b(J\d{6})\b/i);
@@ -95,19 +96,22 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       if (titleClass) detectedClass = titleClass[1].toUpperCase();
     }
 
-    // --- PHASE 2: Locate Local [n] Panel Container ---
+    // --- PHASE 2: Locate Local [n] Header Element ---
     for (const root of searchRoots) {
-      const allEls = Array.from(root.querySelectorAll('*'));
-      for (const el of allEls) {
-        const txt = el.textContent || '';
-        const match = txt.match(/Local\s*\[\s*(\d+)\s*\]/i);
-        if (match && txt.length < 100) {
-          matchedHeaderEl = el;
-          localCount = parseInt(match[1], 10);
-          break;
-        }
+      const candidates = Array.from(root.querySelectorAll('*')).filter(el => {
+        // Exclude buttons, form inputs, scripts
+        if (el.tagName && /^(button|input|select|textarea|script|style)$/i.test(el.tagName)) return false;
+        const txt = (el.textContent || '').trim();
+        return /Local\s*\[\s*\d+\s*\]/i.test(txt) && txt.length < 60;
+      });
+      // Pick innermost element (shortest textContent)
+      candidates.sort((a, b) => (a.textContent || '').length - (b.textContent || '').length);
+      if (candidates.length > 0) {
+        matchedHeaderEl = candidates[0];
+        const match = matchedHeaderEl.textContent.match(/Local\s*\[\s*(\d+)\s*\]/i);
+        if (match) localCount = parseInt(match[1], 10);
+        break;
       }
-      if (matchedHeaderEl) break;
     }
 
     if (!matchedHeaderEl) {
@@ -119,119 +123,174 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       };
     }
 
-    // Find the enclosing card or container for the Local panel
-    let panelContainer = matchedHeaderEl;
-    for (let i = 0; i < 5 && panelContainer; i++) {
-      if (panelContainer.parentElement && (
-        panelContainer.parentElement.classList?.contains('panel') ||
-        panelContainer.parentElement.classList?.contains('card') ||
-        panelContainer.parentElement.classList?.contains('local-panel') ||
-        panelContainer.parentElement.querySelectorAll('img').length >= 1
-      )) {
-        panelContainer = panelContainer.parentElement;
+    // If localCount is explicitly 0, local is clear
+    if (localCount === 0) {
+      return {
+        success: true,
+        system: detectedSystem,
+        class: detectedClass,
+        count: 0,
+        pilots: [],
+        message: `Local is clear (0 pilots in ${detectedSystem} (${detectedClass})).`
+      };
+    }
+
+    // --- PHASE 3: Bound the Local Panel Container ---
+    // Walk up from matchedHeaderEl to find the innermost container housing the pilots
+    // STOP before reaching any ancestor that contains tables or other panels!
+    let localContainer = null;
+    let curr = matchedHeaderEl;
+    for (let i = 0; i < 5 && curr && curr !== doc.body; i++) {
+      const hasPortraits = curr.querySelectorAll?.('img[src*="character"], img[src*="portrait"], [class*="portrait"] img').length >= 1;
+      const hasTable = !!curr.querySelector?.('table');
+      const hasOtherPanels = /Signatures\s*in/i.test(curr.textContent || '') && !/Local\s*\[\s*\d+\s*\]/i.test(curr.textContent || '');
+
+      if (hasPortraits && !hasTable && !hasOtherPanels) {
+        localContainer = curr;
         break;
       }
-      panelContainer = panelContainer.parentElement;
-    }
-    if (!panelContainer) panelContainer = matchedHeaderEl.parentElement || doc.body;
 
-    // --- PHASE 3: Extract Pilot Entries ---
-    const pilots = [];
-
-    // Candidate rows in the panel: look for elements containing an image or pilot info
-    const rowCandidates = Array.from(panelContainer.querySelectorAll('.pilot-row, .pilot-entry, tr, [role="row"], li, div[class*="row"]'));
-    const rows = rowCandidates.filter(r => {
-      // Must contain at least one img or avatar, and not be the header itself
-      return r.querySelectorAll('img').length > 0 && !/Local\s*\[/i.test(r.textContent);
-    });
-
-    // If specific row classes weren't matched, find immediate parent of portrait images
-    const activeRows = rows.length > 0 ? rows : (() => {
-      const imgs = Array.from(panelContainer.querySelectorAll('img')).filter(img => {
-        const src = img.getAttribute('src') || '';
-        return /characters/i.test(src) || img.classList?.contains('portrait') || img.parentElement?.classList?.contains('pilot-portrait');
-      });
-      return imgs.map(img => img.closest('div[class*="entry"], div[class*="row"], tr, li') || img.parentElement?.parentElement || img.parentElement).filter(Boolean);
-    })();
-
-    for (const r of activeRows) {
-      // 1. Portrait URL
-      let portraitUrl = '';
-      const imgs = Array.from(r.querySelectorAll('img'));
-      for (const img of imgs) {
-        const src = img.getAttribute('src') || '';
-        if (/characters/i.test(src) || img.classList?.contains('portrait') || !portraitUrl) {
-          portraitUrl = src;
-          if (/characters/i.test(src)) break;
+      if (curr.parentElement) {
+        // If parent starts including tables or other panels, stop immediately and use curr
+        if (curr.parentElement.querySelector?.('table') || /Signatures\s*in|Structures/i.test(curr.parentElement.textContent || '')) {
+          localContainer = curr;
+          break;
         }
       }
+      curr = curr.parentElement;
+    }
+    if (!localContainer) localContainer = matchedHeaderEl.parentElement || doc.body;
+
+    // --- PHASE 4: Extract Pilot Entries ---
+    const pilots = [];
+
+    // Locate character portraits strictly associated with Local
+    // Exclude type icons (/types/), bracket icons (/brackets/), and route images
+    let portraitImgs = Array.from(localContainer.querySelectorAll('img')).filter(img => {
+      const src = img.getAttribute('src') || '';
+      if (/\/types\//i.test(src) || /\/brackets\//i.test(src)) return false;
+      return /characters/i.test(src) || /character/i.test(src) ||
+             img.classList?.contains('portrait') ||
+             img.parentElement?.classList?.contains('pilot-portrait') ||
+             img.closest?.('[class*="portrait"]');
+    });
+
+    // Fallback: If no images have 'characters' explicitly in src, check elements with corp ticker
+    if (portraitImgs.length === 0) {
+      const elementsWithCorp = Array.from(localContainer.querySelectorAll('*')).filter(el => {
+        if (el.closest && el.closest('table')) return false;
+        return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(el.textContent || '') && el.querySelector('img');
+      });
+      portraitImgs = elementsWithCorp
+        .map(el => el.querySelector('img'))
+        .filter(img => {
+          if (!img) return false;
+          const src = img.getAttribute('src') || '';
+          return !/\/types\//i.test(src) && !/\/brackets\//i.test(src);
+        });
+    }
+
+    for (const pImg of portraitImgs) {
+      // Find row element wrapping this pilot
+      let rowEl = pImg.parentElement;
+      while (rowEl && rowEl !== localContainer && rowEl !== doc.body) {
+        const t = extractCleanNodeText(rowEl);
+        if (/\[[A-Za-z0-9.\-_]{2,8}\]/.test(t) || t.length > 10) {
+          break;
+        }
+        if (!rowEl.parentElement || rowEl.parentElement === localContainer || rowEl.parentElement === doc.body) {
+          break;
+        }
+        rowEl = rowEl.parentElement;
+      }
+      if (!rowEl) rowEl = pImg.parentElement || localContainer;
+
+      // STRICT ISOLATION: Reject any element inside tables or matching other panels
+      if ((rowEl.closest && rowEl.closest('table')) || (rowEl.querySelector && rowEl.querySelector('table'))) continue;
+      const rowText = extractCleanNodeText(rowEl);
+      if (/BSG-\d{3}|RIS-\d{3}|SVG-\d{3}|ZCD-\d{3}|ZCG-\d{3}/i.test(rowText)) continue;
+      if (/Fortizar|Raitaru|Athanor|Keepstar|Astrahus/i.test(rowText)) continue;
+      if (/\b(?:Korsiki|Wuos|Harerget|Ardallabier|Azer|Lirsautton)\b/i.test(rowText)) continue;
+      if (/Signatures\s*in/i.test(rowText) || /Local\s*\[/i.test(rowText)) continue;
+
+      // 1. Portrait URL
+      const portraitUrl = pImg.getAttribute('src') || '';
 
       // 2. Pilot Name and Corp Ticker
       let pilotName = '';
       let corpTicker = '';
 
-      // Check for pilot name container or text
-      const nameEl = r.querySelector('.pilot-name, [class*="name"], div:first-child') || r;
-      const rawNameText = extractCleanNodeText(nameEl);
-
-      // Match "Pilot Name [CORP]" or "Pilot Name"
-      const nameMatch = rawNameText.match(/^([A-Za-z0-9 '\-_]+?)(?:\s*\[([A-Za-z0-9.\-_]{2,8})\])?(?:\s+(?:Capsule|Into|Ship).*|$)/i) ||
-                        rawNameText.match(/^([A-Za-z0-9 '\-_]+?)(?:\s*\[([A-Za-z0-9.\-_]{2,8})\])?$/);
-      if (nameMatch) {
-        pilotName = clean(nameMatch[1]);
-        corpTicker = clean(nameMatch[2] || '');
+      const corpMatch = rowText.match(/([A-Za-z0-9 '\-_]+?)\s*\[([A-Za-z0-9.\-_]{2,8})\]/);
+      if (corpMatch) {
+        pilotName = clean(corpMatch[1]);
+        corpTicker = clean(corpMatch[2]);
       } else {
-        pilotName = clean(rawNameText.replace(/\[.*?\]/, ''));
-        const corpMatch = rawNameText.match(/\[([A-Za-z0-9.\-_]{2,8})\]/);
-        if (corpMatch) corpTicker = corpMatch[1];
+        const nameEl = rowEl.querySelector?.('.pilot-name, [class*="name"]');
+        if (nameEl) {
+          pilotName = clean(extractCleanNodeText(nameEl));
+        } else {
+          pilotName = clean(rowText.split(/\s{2,}|\n/)[0]);
+        }
       }
+
+      // Reject non-pilot rows or UI headers
+      if (!pilotName || /^(Fortizar|Raitaru|Athanor|Type|Id|Group|Info|Local|Signatures|Timer|Owner)$/i.test(pilotName)) continue;
+      if (pilotName.length < 2 || pilotName.length > 60) continue;
 
       // 3. Ship Name
       let shipName = '';
-      const shipNameEl = r.querySelector('.ship-name, [class*="ship-name"], .pilot-ship span');
+      const shipNameEl = rowEl.querySelector?.('.ship-name, [class*="ship-name"]');
       if (shipNameEl) {
         shipName = clean(extractCleanNodeText(shipNameEl));
-      } else {
-        const shipContainer = r.querySelector('.pilot-ship, [class*="ship"]');
-        if (shipContainer) {
-          shipName = clean(extractCleanNodeText(shipContainer));
+      } else if (corpMatch) {
+        const afterCorp = clean(rowText.substring(corpMatch.index + corpMatch[0].length));
+        if (afterCorp) {
+          shipName = afterCorp;
         }
       }
 
       // 4. Ship Type
       let shipType = '';
-      const shipIconEl = r.querySelector('.ship-icon, img[class*="ship"], [title]:not([class*="portrait"])');
-      if (shipIconEl) {
-        shipType = shipIconEl.getAttribute('title') ||
-                   shipIconEl.getAttribute('alt') ||
-                   shipIconEl.getAttribute('data-ship-type') || '';
+      const allRowImgs = Array.from(rowEl.querySelectorAll('img'));
+      const otherImgs = allRowImgs.filter(i => i !== pImg);
+      for (const sImg of otherImgs) {
+        shipType = sImg.getAttribute('title') ||
+                   sImg.getAttribute('alt') ||
+                   sImg.getAttribute('data-ship-type') ||
+                   sImg.getAttribute('aria-label') ||
+                   sImg.closest?.('[title]')?.getAttribute?.('title') ||
+                   sImg.closest?.('[data-tooltip]')?.getAttribute?.('data-tooltip') || '';
+        if (shipType) break;
       }
 
-      // If shipType is still empty, check all images in row that are not the portrait
-      if (!shipType) {
-        for (const img of imgs) {
-          if (img.getAttribute('src') !== portraitUrl) {
-            shipType = img.getAttribute('title') || img.getAttribute('alt') || '';
-            if (shipType) break;
+      // Clean shipName if it repeats shipType from tooltip
+      if (shipType && shipName) {
+        shipName = clean(shipName.replace(new RegExp(`\\b${shipType}\\b`, 'gi'), ''));
+        if (!shipName) shipName = '-';
+      }
+
+      // Fallback: Infer shipType from shipName if known hull
+      if (!shipType && shipName) {
+        if (/^Capsule/i.test(shipName)) shipType = 'Capsule';
+        else if (/^Nemesis/i.test(shipName)) shipType = 'Nemesis';
+        else if (/^Hound/i.test(shipName)) shipType = 'Hound';
+        else if (/^Purifier/i.test(shipName)) shipType = 'Purifier';
+        else if (/^Manticore/i.test(shipName)) shipType = 'Manticore';
+        else {
+          const dashParts = shipName.split(/\s*-\s*/);
+          if (dashParts.length > 1) {
+            shipType = clean(dashParts[0]);
           }
         }
       }
 
-      // Defense against ship name also containing ship type
-      if (!shipType && shipName) {
-        const parts = shipName.split(/\s*-\s*/);
-        if (parts.length > 1) {
-          shipType = clean(parts[0]);
-        }
-      }
-
-      if (pilotName) {
+      if (pilotName && !pilots.some(p => p.pilot === pilotName)) {
         pilots.push({
           pilot: pilotName,
           corp: corpTicker,
           shipName: shipName || '-',
           shipType: shipType || '-',
-          portraitUrl: portraitUrl || ''
+          portraitUrl
         });
       }
     }
@@ -294,15 +353,27 @@ export function extractWandererPilotsFromHtml(htmlString) {
     }
   }
 
-  // Extract pilot entries
+  // Isolate the Local [n] section: find position of Local [n]
+  const localIdx = htmlString.search(/Local\s*\[\s*\d+\s*\]/i);
+  if (localIdx === -1) {
+    return { success: false, error: 'NO_LOCAL_PANEL_DETECTED', pilots: [] };
+  }
+
+  // Take the section starting at Local [n]
+  const localSection = htmlString.substring(localIdx);
+  // Cut off if another major panel starts or body ends
+  const localChunk = localSection.split(/<div class="panel (?:signatures|structures|route)|<table|<\/body/i)[0];
+
+  // Extract pilot entries from the local chunk
   const pilots = [];
-  // Split HTML into row chunks starting with pilot-row or pilot-entry
-  const rawParts = htmlString.split(/(?=<[^>]*class=["'][^"']*(?:pilot-row|pilot-entry))/i);
+  const rawParts = localChunk.split(/(?=<[^>]*class=["'][^"']*(?:pilot-row|pilot-entry))/i);
 
   for (const part of rawParts) {
     if (!/class=["'][^"']*(?:pilot-row|pilot-entry)/i.test(part)) continue;
-    // Restrict chunk to this entry (stop at next entry or container closing)
     const blockContent = part.split(/<div class="panel|<footer|<\/body/i)[0];
+
+    // Reject any table row or structure
+    if (/<tr|<table|BSG-\d{3}|Fortizar/i.test(blockContent)) continue;
 
     // 1. Portrait
     const portraitMatch = blockContent.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
@@ -328,7 +399,7 @@ export function extractWandererPilotsFromHtml(htmlString) {
     // 3. Ship Name
     let shipName = '';
     const shipNameMatch = blockContent.match(/class=["'][^"']*(?:ship-name)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|span)>/i) ||
-                          blockContent.match(/<span>(Capsule[^<]*|Into[^<]*|[A-Za-z0-9 '\-_]+)<\/span>/i);
+                          blockContent.match(/<span>(Capsule[^<]*|Into[^<]*|Never[^<]*|[A-Za-z0-9 '\-_]+)<\/span>/i);
     if (shipNameMatch) {
       shipName = shipNameMatch[1].replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
     }
@@ -336,12 +407,18 @@ export function extractWandererPilotsFromHtml(htmlString) {
     // 4. Ship Type
     let shipType = '';
     const shipIconMatch = blockContent.match(/<img[^>]*(?:class=["'][^"']*ship-icon[^"']*["'][^>]*title=["']([^"']+)["']|title=["']([^"']+)["'][^>]*class=["'][^"']*ship-icon[^"']*["'])/i) ||
-                          blockContent.match(/title=["'](Capsule|Nemesis|[A-Za-z0-9\-]+)["']/i);
+                          blockContent.match(/title=["'](Capsule|Nemesis|Hound|Purifier|Manticore|[A-Za-z0-9\-]+)["']/i);
     if (shipIconMatch) {
       shipType = shipIconMatch[1] || shipIconMatch[2];
     }
 
-    if (pilot) {
+    if (!shipType && shipName) {
+      if (/^Capsule/i.test(shipName)) shipType = 'Capsule';
+      else if (/^Nemesis/i.test(shipName)) shipType = 'Nemesis';
+      else if (/^Hound/i.test(shipName)) shipType = 'Hound';
+    }
+
+    if (pilot && !pilots.some(p => p.pilot === pilot)) {
       pilots.push({
         pilot,
         corp,

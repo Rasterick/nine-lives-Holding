@@ -3,48 +3,123 @@ import { extractWandererPilots, extractWandererPilotsFromHtml } from '../content
 
 console.log('--- Testing extractWandererPilots & extractWandererPilotsFromHtml ---');
 
-// Mock HTML matching Wanderer DOM with Signatures panel & Local panel
-const mockHtml = `
+// Mock HTML matching Wanderer DOM with Signatures, Structures, Routes, and Local panels
+const mockMultiPanelHtml = `
 <!DOCTYPE html>
 <html>
 <head><title>Wanderer - C4 J215758</title></head>
 <body>
-  <div class="panel signatures-panel">
-    <div class="header">
-      <span>[6]</span>
-      <span>Signatures in</span>
-      <span class="badge">C4</span>
-      <span>J215758</span>
+  <div class="sidebar">
+    <!-- Signatures Panel -->
+    <div class="panel signatures-panel">
+      <div class="header">
+        <span>[6]</span>
+        <span>Signatures in</span>
+        <span class="badge">C4</span>
+        <span>J215758</span>
+      </div>
+      <table>
+        <thead><tr><th>Id</th><th>Group</th><th>Info</th><th>Description</th><th>Added</th><th>Updated</th><th>Character</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>BSG-714</td>
+            <td>Wormhole</td>
+            <td>A C247 C3 J172701</td>
+            <td></td>
+            <td>0 11:17:55</td>
+            <td>0 02:09:12</td>
+            <td>Dentin Ename</td>
+            <td><img src="/icons/brackets/wormhole.png"/></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div>
 
-  <div class="panel local-panel">
-    <div class="panel-header">
-      <span class="title">Local [2]</span>
+    <!-- Routes Panel -->
+    <div class="panel routes-panel">
+      <table>
+        <tbody>
+          <tr>
+            <td>0.6 Korsiki 7 0.6 Wuos 8</td>
+            <td><img src="images/30747_64.png"/></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="panel-body">
-      <div class="pilot-row">
-        <div class="pilot-portrait">
-          <img src="https://images.evetech.net/characters/12345/portrait?size=64" alt="Chrysabelle Ellecon" />
-        </div>
-        <div class="pilot-info">
-          <div class="pilot-name">Chrysabelle Ellecon [AP.MC]</div>
-          <div class="pilot-ship">
-            <span class="ship-name">Capsule - Chrysa...</span>
-            <img class="ship-icon" src="/icons/capsule.png" title="Capsule" alt="Capsule" />
+
+    <!-- Structures Panel -->
+    <div class="panel structures-panel">
+      <table>
+        <thead><tr><th>Type</th><th>Name</th><th>Owner</th><th>Status</th><th>Timer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Fortizar</td>
+            <td>Silent Anchorage</td>
+            <td>CCHG</td>
+            <td>Powered</td>
+            <td><img src="https://images.evetech.net/types/35833/icon"/></td>
+          </tr>
+          <tr>
+            <td>Raitaru</td>
+            <td>Keelworks</td>
+            <td>CCHG</td>
+            <td>Powered</td>
+            <td><img src="https://images.evetech.net/types/35825/icon"/></td>
+          </tr>
+          <tr>
+            <td>Athanor</td>
+            <td>Stillhouse</td>
+            <td>CCHG</td>
+            <td>Powered</td>
+            <td><img src="https://images.evetech.net/types/35835/icon"/></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Local [3] Panel -->
+    <div class="panel local-panel">
+      <div class="panel-header">
+        <span class="title">Local [3]</span>
+        <span>Ship name [x] =</span>
+      </div>
+      <div class="panel-body">
+        <div class="pilot-row">
+          <div class="pilot-portrait">
+            <img src="https://images.evetech.net/characters/95000001/portrait?size=64" alt="Chrysabelle Ellecon" />
+          </div>
+          <div class="pilot-info">
+            <div class="pilot-name">Chrysabelle Ellecon [AP.MC]</div>
+            <div class="pilot-ship">
+              <span class="ship-name">Capsule - Chrysa...</span>
+              <img class="ship-icon" src="https://images.evetech.net/types/670/icon" title="Capsule" alt="Capsule" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="pilot-row">
-        <div class="pilot-portrait">
-          <img src="https://images.evetech.net/characters/67890/portrait?size=64" alt="Ultimate Pikie" />
+        <div class="pilot-row">
+          <div class="pilot-portrait">
+            <img src="https://images.evetech.net/characters/95000003/portrait?size=64" alt="Shuma" />
+          </div>
+          <div class="pilot-info">
+            <div class="pilot-name">Shuma [AP.MC]</div>
+            <div class="pilot-ship">
+              <span class="ship-name">Never Talk To Str...</span>
+              <img class="ship-icon" src="https://images.evetech.net/types/11174/icon" title="Hound" alt="Hound" />
+            </div>
+          </div>
         </div>
-        <div class="pilot-info">
-          <div class="pilot-name">Ultimate Pikie [AP.MC]</div>
-          <div class="pilot-ship">
-            <span class="ship-name">Into the Breach</span>
-            <img class="ship-icon" src="/icons/nemesis.png" title="Nemesis" alt="Nemesis" />
+
+        <div class="pilot-row">
+          <div class="pilot-portrait">
+            <img src="https://images.evetech.net/characters/95000002/portrait?size=64" alt="Ultimate Pikie" />
+          </div>
+          <div class="pilot-info">
+            <div class="pilot-name">Ultimate Pikie [AP.MC]</div>
+            <div class="pilot-ship">
+              <span class="ship-name">Into the Breach</span>
+              <img class="ship-icon" src="https://images.evetech.net/types/11377/icon" title="Nemesis" alt="Nemesis" />
+            </div>
           </div>
         </div>
       </div>
@@ -54,8 +129,8 @@ const mockHtml = `
 </html>
 `;
 
-// 1. Test HTML extraction
-const result = extractWandererPilotsFromHtml(mockHtml);
+// 1. Test HTML extraction with multi-panel clutter
+const result = extractWandererPilotsFromHtml(mockMultiPanelHtml);
 
 if (!result.success) {
   throw new Error(`Extraction failed: ${result.error || result.message}`);
@@ -67,39 +142,31 @@ if (result.system !== 'J215758') {
 if (result.class !== 'C4') {
   throw new Error(`Expected class "C4", got "${result.class}"`);
 }
-if (result.count !== 2 || result.pilots.length !== 2) {
-  throw new Error(`Expected 2 pilots, got ${result.pilots.length}`);
+if (result.count !== 3 || result.pilots.length !== 3) {
+  throw new Error(`Expected 3 pilots, got ${result.pilots.length}`);
+}
+
+// Ensure NO structures, routes, or signatures were captured
+for (const p of result.pilots) {
+  if (/Fortizar|Raitaru|Athanor|BSG|Wormhole|Korsiki/i.test(p.pilot) ||
+      /Fortizar|Raitaru|Athanor|BSG|Wormhole|Korsiki/i.test(p.shipName)) {
+    throw new Error(`Extracted non-pilot row as pilot! Row: ${JSON.stringify(p)}`);
+  }
 }
 
 const p1 = result.pilots[0];
-if (p1.pilot !== 'Chrysabelle Ellecon') {
-  throw new Error(`Expected pilot "Chrysabelle Ellecon", got "${p1.pilot}"`);
-}
-if (p1.corp !== 'AP.MC') {
-  throw new Error(`Expected corp "AP.MC", got "${p1.corp}"`);
-}
-if (p1.shipName !== 'Capsule - Chrysa...') {
-  throw new Error(`Expected shipName "Capsule - Chrysa...", got "${p1.shipName}"`);
-}
-if (p1.shipType !== 'Capsule') {
-  throw new Error(`Expected shipType "Capsule", got "${p1.shipType}"`);
-}
-if (!p1.portraitUrl.includes('12345')) {
-  throw new Error(`Expected portraitUrl containing "12345", got "${p1.portraitUrl}"`);
+if (p1.pilot !== 'Chrysabelle Ellecon' || p1.corp !== 'AP.MC' || p1.shipName !== 'Capsule - Chrysa...' || p1.shipType !== 'Capsule') {
+  throw new Error(`Pilot 1 incorrect: ${JSON.stringify(p1)}`);
 }
 
 const p2 = result.pilots[1];
-if (p2.pilot !== 'Ultimate Pikie') {
-  throw new Error(`Expected pilot "Ultimate Pikie", got "${p2.pilot}"`);
+if (p2.pilot !== 'Shuma' || p2.corp !== 'AP.MC' || p2.shipName !== 'Never Talk To Str...' || p2.shipType !== 'Hound') {
+  throw new Error(`Pilot 2 incorrect: ${JSON.stringify(p2)}`);
 }
-if (p2.corp !== 'AP.MC') {
-  throw new Error(`Expected corp "AP.MC", got "${p2.corp}"`);
-}
-if (p2.shipName !== 'Into the Breach') {
-  throw new Error(`Expected shipName "Into the Breach", got "${p2.shipName}"`);
-}
-if (p2.shipType !== 'Nemesis') {
-  throw new Error(`Expected shipType "Nemesis", got "${p2.shipType}"`);
+
+const p3 = result.pilots[2];
+if (p3.pilot !== 'Ultimate Pikie' || p3.corp !== 'AP.MC' || p3.shipName !== 'Into the Breach' || p3.shipType !== 'Nemesis') {
+  throw new Error(`Pilot 3 incorrect: ${JSON.stringify(p3)}`);
 }
 
 // 2. Test Edge case: No Local panel in HTML
@@ -114,66 +181,70 @@ if (nullDocResult.success || nullDocResult.error !== 'NO_DOCUMENT_AVAILABLE') {
   throw new Error('Expected NO_DOCUMENT_AVAILABLE on null doc');
 }
 
-// 4. Test Mock Document handling in extractWandererPilots
+// 4. Test Mock Document handling with multi-panel tree
 const mockDoc = {
   title: 'Wanderer - C4 J215758',
   querySelectorAll(sel) {
     if (sel === 'iframe') return [];
     if (sel === '*') {
+      const localCard = {
+        querySelectorAll(sub) {
+          if (sub.includes('character') || sub === 'img') {
+            return [
+              {
+                getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000001/portrait?size=64' : null,
+                parentElement: {
+                  closest: () => null,
+                  querySelector: () => null,
+                  querySelectorAll: (q) => q === 'img' ? [
+                    { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000001/portrait?size=64' : null },
+                    { getAttribute: (a) => a === 'title' ? 'Capsule' : null, closest: () => null }
+                  ] : [],
+                  textContent: 'Chrysabelle Ellecon [AP.MC] Capsule - Chrysa...',
+                  parentElement: { querySelectorAll: () => [{}] }
+                }
+              },
+              {
+                getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000003/portrait?size=64' : null,
+                parentElement: {
+                  closest: () => null,
+                  querySelector: () => null,
+                  querySelectorAll: (q) => q === 'img' ? [
+                    { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000003/portrait?size=64' : null },
+                    { getAttribute: (a) => a === 'title' ? 'Hound' : null, closest: () => null }
+                  ] : [],
+                  textContent: 'Shuma [AP.MC] Never Talk To Str...',
+                  parentElement: { querySelectorAll: () => [{}] }
+                }
+              },
+              {
+                getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000002/portrait?size=64' : null,
+                parentElement: {
+                  closest: () => null,
+                  querySelector: () => null,
+                  querySelectorAll: (q) => q === 'img' ? [
+                    { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95000002/portrait?size=64' : null },
+                    { getAttribute: (a) => a === 'title' ? 'Nemesis' : null, closest: () => null }
+                  ] : [],
+                  textContent: 'Ultimate Pikie [AP.MC] Into the Breach',
+                  parentElement: { querySelectorAll: () => [{}] }
+                }
+              }
+            ];
+          }
+          return [];
+        }
+      };
+
       return [
         {
           textContent: 'Signatures in C4 J215758',
           childNodes: [{ nodeType: 3, nodeValue: 'Signatures in C4 J215758' }]
         },
         {
-          textContent: 'Local [2]',
-          childNodes: [{ nodeType: 3, nodeValue: 'Local [2]' }],
-          parentElement: {
-            classList: { contains: (c) => c === 'panel' },
-            querySelectorAll(sub) {
-              if (sub === 'img') return [
-                { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/12345/portrait?size=64' : null, classList: { contains: () => false } },
-                { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/67890/portrait?size=64' : null, classList: { contains: () => false } }
-              ];
-              if (sub.includes('pilot-row')) {
-                return [
-                  {
-                    querySelectorAll(imgSel) {
-                      if (imgSel === 'img') return [
-                        { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/12345/portrait?size=64' : null, classList: { contains: () => true } },
-                        { getAttribute: (a) => a === 'title' ? 'Capsule' : null, classList: { contains: () => false } }
-                      ];
-                      return [];
-                    },
-                    querySelector(q) {
-                      if (q.includes('pilot-name')) return { childNodes: [{ nodeType: 3, nodeValue: 'Chrysabelle Ellecon [AP.MC]' }] };
-                      if (q.includes('ship-name')) return { childNodes: [{ nodeType: 3, nodeValue: 'Capsule - Chrysa...' }] };
-                      if (q.includes('ship-icon')) return { getAttribute: (a) => a === 'title' ? 'Capsule' : null };
-                      return null;
-                    },
-                    textContent: 'Chrysabelle Ellecon [AP.MC] Capsule - Chrysa...'
-                  },
-                  {
-                    querySelectorAll(imgSel) {
-                      if (imgSel === 'img') return [
-                        { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/67890/portrait?size=64' : null, classList: { contains: () => true } },
-                        { getAttribute: (a) => a === 'title' ? 'Nemesis' : null, classList: { contains: () => false } }
-                      ];
-                      return [];
-                    },
-                    querySelector(q) {
-                      if (q.includes('pilot-name')) return { childNodes: [{ nodeType: 3, nodeValue: 'Ultimate Pikie [AP.MC]' }] };
-                      if (q.includes('ship-name')) return { childNodes: [{ nodeType: 3, nodeValue: 'Into the Breach' }] };
-                      if (q.includes('ship-icon')) return { getAttribute: (a) => a === 'title' ? 'Nemesis' : null };
-                      return null;
-                    },
-                    textContent: 'Ultimate Pikie [AP.MC] Into the Breach'
-                  }
-                ];
-              }
-              return [];
-            }
-          }
+          textContent: 'Local [3]',
+          childNodes: [{ nodeType: 3, nodeValue: 'Local [3]' }],
+          parentElement: localCard
         }
       ];
     }
@@ -185,13 +256,13 @@ const mockDoc = {
 };
 
 const domResult = extractWandererPilots(mockDoc);
-if (!domResult.success || domResult.pilots.length !== 2) {
+if (!domResult.success || domResult.pilots.length !== 3) {
   throw new Error(`DOM Walker Extraction failed: ${JSON.stringify(domResult)}`);
 }
 if (domResult.system !== 'J215758' || domResult.class !== 'C4') {
   throw new Error(`DOM Walker System mismatch: ${domResult.system} (${domResult.class})`);
 }
-if (domResult.pilots[0].pilot !== 'Chrysabelle Ellecon' || domResult.pilots[1].shipType !== 'Nemesis') {
+if (domResult.pilots[0].pilot !== 'Chrysabelle Ellecon' || domResult.pilots[1].pilot !== 'Shuma' || domResult.pilots[2].shipType !== 'Nemesis') {
   throw new Error(`DOM Walker Pilot parsing mismatch: ${JSON.stringify(domResult.pilots)}`);
 }
 
