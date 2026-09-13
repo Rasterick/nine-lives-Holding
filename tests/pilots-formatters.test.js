@@ -32,10 +32,10 @@ const tsvLines = tsv.trim().split('\n');
 if (tsvLines[0] !== 'J215758 (C4)') {
   throw new Error(`Expected first line to be "J215758 (C4)", got "${tsvLines[0]}"`);
 }
-if (tsvLines[1] !== 'https://images.evetech.net/characters/12345/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule') {
+if (tsvLines[1] !== 'https://images.evetech.net/characters/12345/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule\tCapsule - Chrysa...') {
   throw new Error(`Expected row 1 tab-delimited, got "${tsvLines[1]}"`);
 }
-if (tsvLines[2] !== 'https://images.evetech.net/characters/67890/portrait?size=64\tUltimate Pikie\tAP.MC\tInto the Breach\tNemesis') {
+if (tsvLines[2] !== 'https://images.evetech.net/characters/67890/portrait?size=64\tUltimate Pikie\tAP.MC\tNemesis\tInto the Breach') {
   throw new Error(`Expected row 2 tab-delimited, got "${tsvLines[2]}"`);
 }
 if (tsvLines.length !== 3) {
@@ -51,7 +51,7 @@ if (parsed.system !== 'J215758' || parsed.pilots.length !== 2 || parsed.pilots[0
 
 // 3. Markdown Test
 const md = formatPilotsData(mockPilotsData, 'markdown');
-if (!md.includes('### J215758 (C4)') || !md.includes('| Chrysabelle Ellecon | AP.MC | Capsule - Chrysa... | Capsule |')) {
+if (!md.includes('### J215758 (C4)') || !md.includes('| Chrysabelle Ellecon | AP.MC | Capsule | Capsule - Chrysa... |')) {
   throw new Error(`Markdown output invalid: ${md}`);
 }
 

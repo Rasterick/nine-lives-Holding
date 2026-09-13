@@ -58,9 +58,9 @@ console.log('Generated Clean Pilots TSV Output:\n-------------------------------
 
 const expectedTsv = 
 `J215758 (C4)
-https://images.evetech.net/characters/95000001/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule
-https://images.evetech.net/characters/95000003/portrait?size=64\tShuma\tAP.MC\tNever Talk To Str...\tHound
-https://images.evetech.net/characters/95000002/portrait?size=64\tUltimate Pikie\tAP.MC\tInto the Breach\tNemesis
+https://images.evetech.net/characters/95000001/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule\tCapsule - Chrysa...
+https://images.evetech.net/characters/95000003/portrait?size=64\tShuma\tAP.MC\tHound\tNever Talk To Str...
+https://images.evetech.net/characters/95000002/portrait?size=64\tUltimate Pikie\tAP.MC\tNemesis\tInto the Breach
 `;
 
 if (tsv !== expectedTsv) {
@@ -76,9 +76,9 @@ if (json.system !== 'J215758' || json.class !== 'C4' || json.count !== 3 || json
 // 4. Format Markdown Table
 const md = formatPilotsData(extracted, 'markdown');
 if (!md.includes('### J215758 (C4) — Local [3]') ||
-    !md.includes('| Chrysabelle Ellecon | AP.MC | Capsule - Chrysa... | Capsule |') ||
-    !md.includes('| Shuma | AP.MC | Never Talk To Str... | Hound |') ||
-    !md.includes('| Ultimate Pikie | AP.MC | Into the Breach | Nemesis |')) {
+    !md.includes('| Chrysabelle Ellecon | AP.MC | Capsule | Capsule - Chrysa... |') ||
+    !md.includes('| Shuma | AP.MC | Hound | Never Talk To Str... |') ||
+    !md.includes('| Ultimate Pikie | AP.MC | Nemesis | Into the Breach |')) {
   throw new Error(`Markdown format invalid:\n${md}`);
 }
 

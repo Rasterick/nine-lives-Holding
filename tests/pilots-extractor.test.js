@@ -356,8 +356,8 @@ const liveMockDoc = {
         querySelectorAll(q) {
           if (q === 'img') {
             return [
-              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/94656274/portrait' : (a === 'alt' ? 'Mercy Creed' : null) },
-              { getAttribute: (a) => a === 'title' ? 'Occator' : (a === 'src' ? 'https://images.evetech.net/types/12735/icon' : null), closest: () => null }
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/94656274/portrait' : (a === 'alt' ? 'Mercy Creed' : null) },
+              { tagName: 'IMG', getAttribute: (a) => a === 'title' ? 'Occator' : (a === 'src' ? 'https://images.evetech.net/types/12745/icon' : null), closest: () => null }
             ];
           }
           if (q.includes('title')) {
@@ -377,8 +377,8 @@ const liveMockDoc = {
         querySelectorAll(q) {
           if (q === 'img') {
             return [
-              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/2123051982/portrait' : (a === 'alt' ? 'Michiko Yukiko' : null) },
-              { getAttribute: (a) => a === 'title' ? 'Tengu' : (a === 'src' ? 'https://images.evetech.net/types/29984/icon' : null), closest: () => null }
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/2123051982/portrait' : (a === 'alt' ? 'Michiko Yukiko' : null) },
+              { tagName: 'IMG', getAttribute: (a) => a === 'title' ? 'Tengu' : (a === 'src' ? 'https://images.evetech.net/types/29984/icon' : null), closest: () => null }
             ];
           }
           if (q.includes('title')) {
@@ -398,8 +398,8 @@ const liveMockDoc = {
         querySelectorAll(q) {
           if (q === 'img') {
             return [
-              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95727715/portrait' : (a === 'alt' ? 'Victor Rizzo' : null) },
-              { getAttribute: (a) => a === 'title' ? 'Capsule' : (a === 'src' ? 'https://images.evetech.net/types/670/icon' : null), closest: () => null }
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95727715/portrait' : (a === 'alt' ? 'Victor Rizzo' : null) },
+              { tagName: 'IMG', getAttribute: (a) => a === 'title' ? 'Capsule' : (a === 'src' ? 'https://images.evetech.net/types/670/icon' : null), closest: () => null }
             ];
           }
           if (q.includes('title')) {
@@ -441,22 +441,104 @@ if (!liveResult.success || liveResult.pilots.length !== 3) {
   throw new Error(`Live mock extraction failed: ${JSON.stringify(liveResult)}`);
 }
 
-// Check Mercy Creed: shipName should be '-' (not duplicate Occator), shipType should be 'Occator' (NOT 'Mercy Creed')
+// Check Mercy Creed: shipName should default to 'Occator' if untagged, shipType should be 'Occator'
 const pMercy = liveResult.pilots[0];
-if (pMercy.pilot !== 'Mercy Creed' || pMercy.corp !== 'AP.MC' || pMercy.shipName !== '-' || pMercy.shipType !== 'Occator') {
+if (pMercy.pilot !== 'Mercy Creed' || pMercy.corp !== 'AP.MC' || pMercy.shipName !== 'Occator' || pMercy.shipType !== 'Occator') {
   throw new Error(`Mercy Creed mismatch: ${JSON.stringify(pMercy)}`);
 }
 
-// Check Michiko Yukiko: shipName should be 'Mission runer', shipType should be 'Tengu' (NOT 'Michiko Yukiko')
+// Check Michiko Yukiko: shipName should be 'Mission runer', shipType should be 'Tengu'
 const pMichiko = liveResult.pilots[1];
 if (pMichiko.pilot !== 'Michiko Yukiko' || pMichiko.corp !== 'AP.MC' || pMichiko.shipName !== 'Mission runer' || pMichiko.shipType !== 'Tengu') {
   throw new Error(`Michiko Yukiko mismatch: ${JSON.stringify(pMichiko)}`);
 }
 
-// Check Victor Rizzo: shipName should be '-' (cleaned trailing dash and matches hull), shipType should be 'Capsule' (NOT 'Victor Rizzo')
+// Check Victor Rizzo: shipName should be 'Capsule' (trailing dash stripped), shipType should be 'Capsule'
 const pVictor = liveResult.pilots[2];
-if (pVictor.pilot !== 'Victor Rizzo' || pVictor.corp !== 'AP.MC' || pVictor.shipName !== '-' || pVictor.shipType !== 'Capsule') {
+if (pVictor.pilot !== 'Victor Rizzo' || pVictor.corp !== 'AP.MC' || pVictor.shipName !== 'Capsule' || pVictor.shipType !== 'Capsule') {
   throw new Error(`Victor Rizzo mismatch: ${JSON.stringify(pVictor)}`);
+}
+
+// Test case 4: Full User Scenario (6 pilots: Abon Riff, Mercy Creed, Salva Coline, Tyrom Hir, Victor Rizzo, Yukiko Yuuki)
+const sixPilotsDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {},
+  querySelectorAll(sel) {
+    if (sel === '*') {
+      const pilotsData = [
+        { name: 'Abon Riff', corp: 'AP.MC', text: 'Abon Riff [ AP.MC ] ☜☠☞ Palliser', charId: 92029163, typeId: 33470, expectedType: 'Stratios', expectedName: '☜☠☞ Palliser' },
+        { name: 'Mercy Creed', corp: 'AP.MC', text: 'Mercy Creed [ AP.MC ] Occator', charId: 94656274, typeId: 12745, expectedType: 'Occator', expectedName: 'Occator' },
+        { name: 'Salva Coline', corp: 'AP.MC', text: 'Salva Coline [ AP.MC ] ☜☠☞ Tapir', charId: 92996645, typeId: 33468, expectedType: 'Astero', expectedName: '☜☠☞ Tapir' },
+        { name: 'Tyrom Hir', corp: 'AP.MC', text: 'Tyrom Hir [ AP.MC ] ☜☠☞ Vindictive', charId: 1906220295, typeId: 33470, expectedType: 'Stratios', expectedName: '☜☠☞ Vindictive' },
+        { name: 'Victor Rizzo', corp: 'AP.MC', text: 'Victor Rizzo [ AP.MC ] Capsule - Victor Rizzo', charId: 95727715, typeId: 670, expectedType: 'Capsule', expectedName: 'Capsule - Victor Rizzo' },
+        { name: 'Yukiko Yuuki', corp: 'AP.MC', text: 'Yukiko Yuuki [ AP.MC ] Porpoise', charId: 2123007707, typeId: 42244, expectedType: 'Porpoise', expectedName: 'Porpoise' }
+      ];
+
+      const rows = pilotsData.map(p => ({
+        tagName: 'DIV',
+        className: 'pilot-row',
+        textContent: p.text,
+        querySelectorAll(q) {
+          if (q === 'img') {
+            return [
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? `https://images.evetech.net/characters/${p.charId}/portrait` : (a === 'alt' ? p.name : null) },
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? `https://images.evetech.net/types/${p.typeId}/icon` : null, closest: () => null }
+            ];
+          }
+          if (q.includes('title')) {
+            return [
+              { getAttribute: (a) => a === 'title' ? p.expectedName : null, closest: () => null }
+            ];
+          }
+          return [];
+        }
+      }));
+
+      const localCard = {
+        tagName: 'DIV',
+        className: 'panel local-panel',
+        parentElement: null,
+        querySelectorAll(q) {
+          if (q === '*') return rows;
+          return [];
+        }
+      };
+
+      return [
+        {
+          textContent: 'Local [6]',
+          parentElement: localCard
+        }
+      ];
+    }
+    return [];
+  },
+  querySelector() {
+    return null;
+  }
+};
+
+const sixResult = extractWandererPilots(sixPilotsDoc);
+if (!sixResult.success || sixResult.pilots.length !== 6) {
+  throw new Error(`Six pilots extraction failed: ${JSON.stringify(sixResult)}`);
+}
+
+// Verify every pilot matches expected shipType and shipName
+const expectedPilots = [
+  { pilot: 'Abon Riff', corp: 'AP.MC', shipType: 'Stratios', shipName: '☜☠☞ Palliser' },
+  { pilot: 'Mercy Creed', corp: 'AP.MC', shipType: 'Occator', shipName: 'Occator' },
+  { pilot: 'Salva Coline', corp: 'AP.MC', shipType: 'Astero', shipName: '☜☠☞ Tapir' },
+  { pilot: 'Tyrom Hir', corp: 'AP.MC', shipType: 'Stratios', shipName: '☜☠☞ Vindictive' },
+  { pilot: 'Victor Rizzo', corp: 'AP.MC', shipType: 'Capsule', shipName: 'Capsule - Victor Rizzo' },
+  { pilot: 'Yukiko Yuuki', corp: 'AP.MC', shipType: 'Porpoise', shipName: 'Porpoise' }
+];
+
+for (let i = 0; i < expectedPilots.length; i++) {
+  const exp = expectedPilots[i];
+  const actual = sixResult.pilots[i];
+  if (actual.pilot !== exp.pilot || actual.corp !== exp.corp || actual.shipType !== exp.shipType || actual.shipName !== exp.shipName) {
+    throw new Error(`Pilot ${i} (${exp.pilot}) mismatch! Expected: ${JSON.stringify(exp)}, Got: ${JSON.stringify(actual)}`);
+  }
 }
 
 console.log('✅ Local Pilots Extractor tests passed!');
