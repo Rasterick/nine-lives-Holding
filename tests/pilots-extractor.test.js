@@ -175,6 +175,28 @@ if (emptyResult.success) {
   throw new Error('Expected failure on page without Local panel');
 }
 
+// 2b. Test Local [0] empty/clear state with multi-panel clutter
+const clearLocalHtml = `
+  <div class="panel signatures-panel">
+    <div class="header">Signatures in C4 J215758</div>
+    <table><tr><td>BSG-714</td><td>Wormhole</td><td>A C247 C3 J172701</td><td><img src="/icons/brackets/wormhole.png"/></td></tr></table>
+  </div>
+  <div class="panel structures-panel">
+    <table><tr><td>Fortizar</td><td><img src="https://images.evetech.net/types/35833/icon"/></td></tr></table>
+  </div>
+  <div class="panel local-panel">
+    <div class="panel-header"><span class="title">Local [0]</span></div>
+    <div class="panel-body">No pilots active</div>
+  </div>
+`;
+const clearResult = extractWandererPilotsFromHtml(clearLocalHtml);
+if (!clearResult.success || clearResult.count !== 0 || clearResult.pilots.length !== 0) {
+  throw new Error(`Expected 0 pilots on Local [0], got ${JSON.stringify(clearResult)}`);
+}
+if (clearResult.system !== 'J215758' || clearResult.class !== 'C4') {
+  throw new Error(`Expected J215758 (C4), got ${clearResult.system} (${clearResult.class})`);
+}
+
 // 3. Test null doc handling in extractWandererPilots
 const nullDocResult = extractWandererPilots(null);
 if (nullDocResult.success || nullDocResult.error !== 'NO_DOCUMENT_AVAILABLE') {

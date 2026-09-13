@@ -450,13 +450,19 @@ async function handleIngestWandererPilots() {
       extraction = successful?.result || execResults?.[0]?.result;
     }
 
-    if (!extraction || !extraction.success || (!extraction.pilots?.length && extraction.count !== 0)) {
+    if (!extraction || !extraction.success || !extraction.pilots?.length) {
+      const isClear = extraction?.count === 0 || extraction?.pilots?.length === 0;
       outputBox.innerHTML = `
         <div style="color: #f59e0b; font-weight: 700;">
-          [!] NO LOCAL PILOTS DETECTED
+          ${isClear ? '[!] LOCAL CLEAR // NO PILOTS IN SYSTEM' : '[!] NO LOCAL PILOTS DETECTED'}
         </div>
         <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
-          ${extraction?.message || 'Please ensure Wanderer has an active system with the Local roster open, then try again.'}
+          ${isClear 
+            ? `Wanderer reports 0 pilots active in ${extraction?.system || 'Unknown'} (${extraction?.class || 'Unknown'}). Anti-table shield active: zero stray signatures or structures captured.`
+            : (extraction?.message || 'Please ensure Wanderer has an active system with the Local roster open, then try again.')}
+        </div>
+        <div style="margin-top: 6px; padding: 4px 6px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; font-size: 8px; color: #10b981;">
+          ✔ Active System Verified: <span style="font-weight: 700; color: #fff;">${extraction?.system || 'Unknown'} (${extraction?.class || 'Unknown'})</span>
         </div>
       `;
       return;

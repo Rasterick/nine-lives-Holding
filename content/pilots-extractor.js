@@ -359,6 +359,18 @@ export function extractWandererPilotsFromHtml(htmlString) {
     return { success: false, error: 'NO_LOCAL_PANEL_DETECTED', pilots: [] };
   }
 
+  const countMatch = htmlString.match(/Local\s*\[\s*(\d+)\s*\]/i);
+  const localCount = countMatch ? parseInt(countMatch[1], 10) : null;
+  if (localCount === 0) {
+    return {
+      success: true,
+      system,
+      class: systemClass,
+      count: 0,
+      pilots: []
+    };
+  }
+
   // Take the section starting at Local [n]
   const localSection = htmlString.substring(localIdx);
   // Cut off if another major panel starts or body ends

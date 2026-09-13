@@ -48,6 +48,26 @@ if (btnTestPilots) {
   });
 }
 
+const btnToggleLocalClear = document.getElementById('btnToggleLocalClear');
+if (btnToggleLocalClear) {
+  let isClear = false;
+  const originalBody = document.querySelector('#mockLocalPanel .panel-body')?.innerHTML;
+  btnToggleLocalClear.addEventListener('click', () => {
+    isClear = !isClear;
+    const titleEl = document.querySelector('#mockLocalPanel .title');
+    const bodyEl = document.querySelector('#mockLocalPanel .panel-body');
+    if (isClear) {
+      if (titleEl) titleEl.textContent = 'Local [0]';
+      if (bodyEl) bodyEl.innerHTML = '<div style="padding: 12px; text-align: center; color: #64748b; font-size: 10px;">No pilots active in system.</div>';
+      btnToggleLocalClear.textContent = '🔄 RESTORE LOCAL [3]';
+    } else {
+      if (titleEl) titleEl.textContent = 'Local [3]';
+      if (bodyEl) bodyEl.innerHTML = originalBody;
+      btnToggleLocalClear.textContent = '🔄 TOGGLE LOCAL CLEAR [0]';
+    }
+  });
+}
+
 // Listen for extension popup extraction queries
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
