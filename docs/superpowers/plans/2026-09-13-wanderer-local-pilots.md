@@ -57,7 +57,7 @@
   ```
 - Produces: `formatPilotsData(data, format = 'tsv')` returning formatted string.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```javascript
 // tests/pilots-formatters.test.js
@@ -126,12 +126,12 @@ if (emptyTsv !== '') {
 console.log('✅ Pilots Formatter tests passed!');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node tests/pilots-formatters.test.js`
 Expected: FAIL with `TypeError: (0 , _formatters.formatPilotsData) is not a function`
 
-- [ ] **Step 3: Implement `formatPilotsData` in `lib/formatters.js`**
+- [x] **Step 3: Implement `formatPilotsData` in `lib/formatters.js`**
 
 Add to `lib/formatters.js`:
 ```javascript
@@ -188,17 +188,17 @@ export function formatPilotsData(data, format = 'tsv') {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node tests/pilots-formatters.test.js`
 Expected: PASS with "✅ Pilots Formatter tests passed!"
 
-- [ ] **Step 5: Run existing formatters tests to ensure no regressions**
+- [x] **Step 5: Run existing formatters tests to ensure no regressions**
 
 Run: `node tests/formatters.test.js`
 Expected: PASS
 
-- [ ] **Step 6: Commit changes**
+- [x] **Step 6: Commit changes**
 
 ```bash
 git add lib/formatters.js tests/pilots-formatters.test.js
@@ -227,7 +227,7 @@ git commit -m "feat(formatters): add formatPilotsData for TSV, JSON, and Markdow
   // OR { success: false, error: 'No Local panel detected on active page' }
   ```
 
-- [ ] **Step 1: Write the failing unit test**
+- [x] **Step 1: Write the failing unit test**
 
 ```javascript
 // tests/pilots-extractor.test.js
@@ -336,12 +336,12 @@ if (emptyResult.success) {
 console.log('✅ Local Pilots Extractor tests passed!');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node tests/pilots-extractor.test.js`
 Expected: FAIL with "Cannot find module '../content/pilots-extractor.js'"
 
-- [ ] **Step 3: Implement `content/pilots-extractor.js`**
+- [x] **Step 3: Implement `content/pilots-extractor.js`**
 
 Implement `content/pilots-extractor.js` ensuring 100% self-containment:
 - Recursive node text extractor.
@@ -354,12 +354,12 @@ Implement `content/pilots-extractor.js` ensuring 100% self-containment:
   - Ship Type: `title`, `alt`, or `data-ship-type` of ship icon/image.
   - Portrait URL: `src` attribute of first portrait `<img>`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node tests/pilots-extractor.test.js`
 Expected: PASS with "✅ Local Pilots Extractor tests passed!"
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add content/pilots-extractor.js tests/pilots-extractor.test.js
@@ -382,7 +382,7 @@ git commit -m "feat(extractor): add self-contained extractWandererPilots DOM ext
 - Clipboard: Formats via `formatPilotsData(data, currentFormat)` and writes to clipboard.
 - Telemetry: Displays count, system, class, and latency in status log and copy notification.
 
-- [ ] **Step 1: Arm Button 3 in `popup/popup.html`**
+- [x] **Step 1: Arm Button 3 in `popup/popup.html`**
 
 Update `btnPilots`:
 ```html
@@ -403,7 +403,7 @@ Update `btnPilots`:
 </button>
 ```
 
-- [ ] **Step 2: Ensure `.dot-cyan` styling in `popup/popup.css`**
+- [x] **Step 2: Ensure `.dot-cyan` styling in `popup/popup.css`**
 
 Ensure `.dot-cyan` has glowing cyan pulse:
 ```css
@@ -413,7 +413,7 @@ Ensure `.dot-cyan` has glowing cyan pulse:
 }
 ```
 
-- [ ] **Step 3: Wire `btnPilots` and state in `popup/popup.js`**
+- [x] **Step 3: Wire `btnPilots` and state in `popup/popup.js`**
 
 - Import `extractWandererPilots` from `../content/pilots-extractor.js`.
 - Import `formatPilotsData` from `../lib/formatters.js`.
@@ -433,7 +433,7 @@ Ensure `.dot-cyan` has glowing cyan pulse:
   - On error:
     - Log error and display tactical alert.
 
-- [ ] **Step 4: Commit popup integration**
+- [x] **Step 4: Commit popup integration**
 
 ```bash
 git add popup/popup.html popup/popup.css popup/popup.js
@@ -448,7 +448,7 @@ git commit -m "feat(popup): activate Get Pilots in System [LOCAL] HUD action"
 - Modify: `sandbox/test-map.html`
 - Create: `tests/pilots-simulation.test.js`
 
-- [ ] **Step 1: Add Wanderer `Local [2]` panel widget into `sandbox/test-map.html`**
+- [x] **Step 1: Add Wanderer `Local [2]` panel widget into `sandbox/test-map.html`**
 
 Add HTML widget to `sandbox/test-map.html`:
 ```html
@@ -481,7 +481,7 @@ Add HTML widget to `sandbox/test-map.html`:
 </div>
 ```
 
-- [ ] **Step 2: Create end-to-end simulation test `tests/pilots-simulation.test.js`**
+- [x] **Step 2: Create end-to-end simulation test `tests/pilots-simulation.test.js`**
 
 ```javascript
 // tests/pilots-simulation.test.js
@@ -541,7 +541,7 @@ if (!mdOutput.includes('### J215758 (C4)') || !mdOutput.includes('| Ultimate Pik
 console.log('✅ End-to-End Pilots Simulation test passed!');
 ```
 
-- [ ] **Step 3: Run full suite of all project tests**
+- [x] **Step 3: Run full suite of all project tests**
 
 Run:
 ```bash
@@ -556,7 +556,7 @@ node tests/end-to-end.test.js
 ```
 Expected: All tests PASS with zero errors.
 
-- [ ] **Step 4: Commit test updates**
+- [x] **Step 4: Commit test updates**
 
 ```bash
 git add sandbox/test-map.html tests/pilots-simulation.test.js
