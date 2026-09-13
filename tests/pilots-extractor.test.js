@@ -343,5 +343,122 @@ if (spacedResult.pilots[1].pilot !== 'Victor Rizzo' || spacedResult.pilots[1].co
   throw new Error(`Spaced pilot 2 mismatch: ${JSON.stringify(spacedResult.pilots[1])}`);
 }
 
+// Test case 3: Live Wanderer pilot rows with ship hulls, tags, and portrait alt tags (prevent duplicate names)
+const liveMockDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {},
+  querySelectorAll(sel) {
+    if (sel === '*') {
+      const row1 = {
+        tagName: 'DIV',
+        className: 'pilot-row',
+        textContent: 'Mercy Creed [ AP.MC ] Occator',
+        querySelectorAll(q) {
+          if (q === 'img') {
+            return [
+              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/94656274/portrait' : (a === 'alt' ? 'Mercy Creed' : null) },
+              { getAttribute: (a) => a === 'title' ? 'Occator' : (a === 'src' ? 'https://images.evetech.net/types/12735/icon' : null), closest: () => null }
+            ];
+          }
+          if (q.includes('title')) {
+            return [
+              { getAttribute: (a) => a === 'title' ? 'Mercy Creed' : null },
+              { getAttribute: (a) => a === 'title' ? 'Occator' : null, closest: () => null }
+            ];
+          }
+          return [];
+        }
+      };
+
+      const row2 = {
+        tagName: 'DIV',
+        className: 'pilot-row',
+        textContent: 'Michiko Yukiko [ AP.MC ] Mission runer',
+        querySelectorAll(q) {
+          if (q === 'img') {
+            return [
+              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/2123051982/portrait' : (a === 'alt' ? 'Michiko Yukiko' : null) },
+              { getAttribute: (a) => a === 'title' ? 'Tengu' : (a === 'src' ? 'https://images.evetech.net/types/29984/icon' : null), closest: () => null }
+            ];
+          }
+          if (q.includes('title')) {
+            return [
+              { getAttribute: (a) => a === 'title' ? 'Michiko Yukiko' : null },
+              { getAttribute: (a) => a === 'title' ? 'Tengu' : null, closest: () => null }
+            ];
+          }
+          return [];
+        }
+      };
+
+      const row3 = {
+        tagName: 'DIV',
+        className: 'pilot-row',
+        textContent: 'Victor Rizzo [ AP.MC ] Capsule -',
+        querySelectorAll(q) {
+          if (q === 'img') {
+            return [
+              { getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/95727715/portrait' : (a === 'alt' ? 'Victor Rizzo' : null) },
+              { getAttribute: (a) => a === 'title' ? 'Capsule' : (a === 'src' ? 'https://images.evetech.net/types/670/icon' : null), closest: () => null }
+            ];
+          }
+          if (q.includes('title')) {
+            return [
+              { getAttribute: (a) => a === 'title' ? 'Victor Rizzo' : null },
+              { getAttribute: (a) => a === 'title' ? 'Capsule' : null, closest: () => null }
+            ];
+          }
+          return [];
+        }
+      };
+
+      const localCard = {
+        tagName: 'DIV',
+        className: 'panel local-panel',
+        parentElement: null,
+        querySelectorAll(q) {
+          if (q === '*') return [row1, row2, row3];
+          return [];
+        }
+      };
+
+      return [
+        {
+          textContent: 'Local [3]',
+          parentElement: localCard
+        }
+      ];
+    }
+    return [];
+  },
+  querySelector() {
+    return null;
+  }
+};
+
+const liveResult = extractWandererPilots(liveMockDoc);
+if (!liveResult.success || liveResult.pilots.length !== 3) {
+  throw new Error(`Live mock extraction failed: ${JSON.stringify(liveResult)}`);
+}
+
+// Check Mercy Creed: shipName should be '-' (not duplicate Occator), shipType should be 'Occator' (NOT 'Mercy Creed')
+const pMercy = liveResult.pilots[0];
+if (pMercy.pilot !== 'Mercy Creed' || pMercy.corp !== 'AP.MC' || pMercy.shipName !== '-' || pMercy.shipType !== 'Occator') {
+  throw new Error(`Mercy Creed mismatch: ${JSON.stringify(pMercy)}`);
+}
+
+// Check Michiko Yukiko: shipName should be 'Mission runer', shipType should be 'Tengu' (NOT 'Michiko Yukiko')
+const pMichiko = liveResult.pilots[1];
+if (pMichiko.pilot !== 'Michiko Yukiko' || pMichiko.corp !== 'AP.MC' || pMichiko.shipName !== 'Mission runer' || pMichiko.shipType !== 'Tengu') {
+  throw new Error(`Michiko Yukiko mismatch: ${JSON.stringify(pMichiko)}`);
+}
+
+// Check Victor Rizzo: shipName should be '-' (cleaned trailing dash and matches hull), shipType should be 'Capsule' (NOT 'Victor Rizzo')
+const pVictor = liveResult.pilots[2];
+if (pVictor.pilot !== 'Victor Rizzo' || pVictor.corp !== 'AP.MC' || pVictor.shipName !== '-' || pVictor.shipType !== 'Capsule') {
+  throw new Error(`Victor Rizzo mismatch: ${JSON.stringify(pVictor)}`);
+}
+
 console.log('✅ Local Pilots Extractor tests passed!');
+
 

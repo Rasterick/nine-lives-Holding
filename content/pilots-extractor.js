@@ -15,6 +15,30 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       return (str || '').replace(/\s+/g, ' ').trim();
     }
 
+    const KNOWN_HULLS = new Set([
+      'Occator', 'Mastodon', 'Bustard', 'Impel', 'Prorator', 'Prowler', 'Crane', 'Anathema',
+      'Iteron', 'Tayra', 'Mammoth', 'Badger', 'Wreath', 'Hoarder', 'Epithal', 'Miasmos', 'Kryos',
+      'Porpoise', 'Orca', 'Rorqual', 'Procurer', 'Retriever', 'Covetor', 'Skiff', 'Mackinaw', 'Hulk',
+      'Capsule', 'Shuttle',
+      'Loki', 'Tengu', 'Legion', 'Proteus', 'Jackdaw', 'Svipul', 'Confessor', 'Hecate',
+      'Nemesis', 'Hound', 'Purifier', 'Manticore', 'Astero', 'Stratios', 'Nestor',
+      'Helios', 'Buzzard', 'Cheetah', 'Pacifier', 'Enforcer', 'Marshal',
+      'Ishtar', 'Cerberus', 'Eagle', 'Zealot', 'Sacrilege', 'Deimos', 'Vagabond', 'Muninn',
+      'Falcon', 'Rook', 'Arazu', 'Lachesis', 'Pilgrim', 'Curse', 'Rapier', 'Huginn',
+      'Broadsword', 'Onyx', 'Devoter', 'Phobos',
+      'Gila', 'Cynabal', 'Phantasm', 'Ashimmu', 'Vigilant', 'Orthrus',
+      'Drake', 'Hurricane', 'Harbinger', 'Brutix', 'Cyclone', 'Myrmidon', 'Prophecy', 'Ferox', 'Naga', 'Talos', 'Tornado', 'Oracle',
+      'Drekavac', 'Ikitursa', 'Rodiva', 'Zarmazd',
+      'Sleipnir', 'Astarte', 'Eos', 'Damnation', 'Absolution', 'Nighthawk', 'Vulture', 'Claymore',
+      'Rokh', 'Raven', 'Scorpion', 'Megathron', 'Dominix', 'Hyperion', 'Apocalypse', 'Armageddon', 'Abaddon', 'Tempest', 'Typhoon', 'Maelstrom',
+      'Paladin', 'Golem', 'Kronos', 'Vargur', 'Bhaalgorn', 'Machariel', 'Nightmare', 'Rattlesnake', 'Vindicator', 'Praxis', 'Gnosis', 'Sunesis',
+      'Revelation', 'Phoenix', 'Moros', 'Naglfar', 'Zirnitra', 'Archon', 'Chimera', 'Thanatos', 'Nidhoggur', 'Apostle', 'Minokawa', 'Ninazu', 'Lif',
+      'Rifter', 'Tristan', 'Kestrel', 'Merlin', 'Incursus', 'Punisher', 'Tormentor', 'Slasher', 'Atron', 'Executioner', 'Breacher',
+      'Stiletto', 'Malediction', 'Ares', 'Crow', 'Claw', 'Crusader', 'Raptor', 'Taranis',
+      'Wolf', 'Jaguar', 'Hawk', 'Harpy', 'Ishkur', 'Enyo', 'Retribution', 'Vengeance',
+      'Daredevil', 'Dramiel', 'Cruor', 'Succubus', 'Worm'
+    ]);
+
     /**
      * Walks DOM node tree and extracts text pieces joined by spaces.
      */
@@ -296,38 +320,85 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       } catch {}
 
       for (const sImg of allRowImgs) {
-        const sUrl = sImg.getAttribute?.('src') || sImg.src || '';
-        if (portraitUrl && sUrl === portraitUrl) continue;
-        const title = sImg.getAttribute?.('title') ||
-                      sImg.getAttribute?.('alt') ||
-                      sImg.getAttribute?.('data-ship-type') ||
-                      sImg.getAttribute?.('aria-label') ||
-                      sImg.getAttribute?.('data-tooltip') || '';
-        if (title && !/^(portrait|avatar|close|edit|delete)$/i.test(title)) {
-          shipType = title;
-          break;
+        if (sImg === pImg) continue;
+        if (pImg && (sImg.contains?.(pImg) || pImg.contains?.(sImg))) continue;
+        if (sImg.closest?.('[class*="portrait"], [class*="avatar"], [class*="pilot-image"], [class*="pilot-portrait"]')) continue;
+
+        const sMedia = extractMediaUrl(sImg) || sImg.getAttribute?.('src') || sImg.src || '';
+        if (portraitUrl && sMedia && (sMedia === portraitUrl || sMedia.includes(portraitUrl) || portraitUrl.includes(sMedia) || /characters/i.test(sMedia))) {
+          continue;
         }
+
+        const rawTitle = sImg.getAttribute?.('title') ||
+                         sImg.getAttribute?.('alt') ||
+                         sImg.getAttribute?.('data-ship-type') ||
+                         sImg.getAttribute?.('aria-label') ||
+                         sImg.getAttribute?.('data-tooltip') ||
+                         sImg.closest?.('[title]')?.getAttribute?.('title') ||
+                         sImg.closest?.('[data-tooltip]')?.getAttribute?.('data-tooltip') || '';
+
+        if (!rawTitle) continue;
+
+        let title = clean(rawTitle);
+
+        // Strip pilot name if present in title
+        if (pilotName) {
+          if (title.toLowerCase() === pilotName.toLowerCase()) continue;
+          title = clean(title.split(pilotName).join(''));
+          title = title.replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '').trim();
+        }
+
+        // Strip corp ticker if present in title
+        if (corpTicker) {
+          if (title.toLowerCase() === corpTicker.toLowerCase()) continue;
+          title = clean(title.split(corpTicker).join(''));
+          title = title.replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '').trim();
+        }
+
+        if (!title || /^(portrait|avatar|close|edit|delete|dock|undock|docked|undocked|station|structure|ship\s*name)$/i.test(title)) {
+          continue;
+        }
+
+        shipType = title;
+        break;
       }
 
-      // Clean shipName if it repeats shipType from tooltip
-      if (shipType && shipName) {
-        shipName = clean(shipName.replace(new RegExp(`\\b${shipType}\\b`, 'gi'), ''));
-        if (!shipName) shipName = '-';
-      }
-
-      // Fallback: Infer shipType from shipName if known hull
+      // 5. Fallback: Infer shipType from shipName if known hull
       if (!shipType && shipName) {
-        if (/^Capsule/i.test(shipName)) shipType = 'Capsule';
-        else if (/^Nemesis/i.test(shipName)) shipType = 'Nemesis';
-        else if (/^Hound/i.test(shipName)) shipType = 'Hound';
-        else if (/^Purifier/i.test(shipName)) shipType = 'Purifier';
-        else if (/^Manticore/i.test(shipName)) shipType = 'Manticore';
-        else {
+        if (/^Capsule/i.test(shipName)) {
+          shipType = 'Capsule';
+        } else if (/^Nemesis/i.test(shipName)) {
+          shipType = 'Nemesis';
+        } else if (/^Hound/i.test(shipName)) {
+          shipType = 'Hound';
+        } else if (/^Purifier/i.test(shipName)) {
+          shipType = 'Purifier';
+        } else if (/^Manticore/i.test(shipName)) {
+          shipType = 'Manticore';
+        } else if (KNOWN_HULLS.has(shipName)) {
+          shipType = shipName;
+        } else {
           const dashParts = shipName.split(/\s*-\s*/);
-          if (dashParts.length > 1 && dashParts[0].length >= 3) {
+          if (dashParts.length > 1 && dashParts[0].length >= 3 && KNOWN_HULLS.has(clean(dashParts[0]))) {
             shipType = clean(dashParts[0]);
           }
         }
+      }
+
+      // 6. Clean shipName
+      if (shipName) {
+        // Strip trailing dashes (e.g. "Capsule -")
+        const strippedName = clean(shipName.replace(/[\s\-–—:]+$/, ''));
+        if (shipType && strippedName.toLowerCase() === shipType.toLowerCase()) {
+          // If shipName is identical to shipType (e.g. "Occator" or "Capsule"), pilot has no custom tag
+          shipName = '-';
+        } else if (!strippedName) {
+          shipName = '-';
+        } else {
+          shipName = strippedName;
+        }
+      } else {
+        shipName = '-';
       }
 
       if (pilotName && !pilots.some(p => p.pilot === pilotName)) {
