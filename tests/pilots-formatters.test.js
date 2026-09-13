@@ -32,10 +32,10 @@ const tsvLines = tsv.trim().split('\n');
 if (tsvLines[0] !== 'J215758 (C4)') {
   throw new Error(`Expected first line to be "J215758 (C4)", got "${tsvLines[0]}"`);
 }
-if (tsvLines[1] !== 'Chrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule\thttps://images.evetech.net/characters/12345/portrait?size=64') {
+if (tsvLines[1] !== 'https://images.evetech.net/characters/12345/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule') {
   throw new Error(`Expected row 1 tab-delimited, got "${tsvLines[1]}"`);
 }
-if (tsvLines[2] !== 'Ultimate Pikie\tAP.MC\tInto the Breach\tNemesis\thttps://images.evetech.net/characters/67890/portrait?size=64') {
+if (tsvLines[2] !== 'https://images.evetech.net/characters/67890/portrait?size=64\tUltimate Pikie\tAP.MC\tInto the Breach\tNemesis') {
   throw new Error(`Expected row 2 tab-delimited, got "${tsvLines[2]}"`);
 }
 if (tsvLines.length !== 3) {

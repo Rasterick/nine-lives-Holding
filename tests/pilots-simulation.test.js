@@ -58,9 +58,9 @@ console.log('Generated Clean Pilots TSV Output:\n-------------------------------
 
 const expectedTsv = 
 `J215758 (C4)
-Chrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule\thttps://images.evetech.net/characters/95000001/portrait?size=64
-Shuma\tAP.MC\tNever Talk To Str...\tHound\thttps://images.evetech.net/characters/95000003/portrait?size=64
-Ultimate Pikie\tAP.MC\tInto the Breach\tNemesis\thttps://images.evetech.net/characters/95000002/portrait?size=64
+https://images.evetech.net/characters/95000001/portrait?size=64\tChrysabelle Ellecon\tAP.MC\tCapsule - Chrysa...\tCapsule
+https://images.evetech.net/characters/95000003/portrait?size=64\tShuma\tAP.MC\tNever Talk To Str...\tHound
+https://images.evetech.net/characters/95000002/portrait?size=64\tUltimate Pikie\tAP.MC\tInto the Breach\tNemesis
 `;
 
 if (tsv !== expectedTsv) {
