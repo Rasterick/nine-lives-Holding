@@ -269,20 +269,28 @@ export function extractWandererPilotsFromHtml(htmlString) {
     };
   }
 
-  // Resolve System and Class from HTML
+  // Clean text for system/class identification
+  const spacedHtml = htmlString.replace(/<\/?[^>]+(>|$)/g, ' ');
+  const cleanText = spacedHtml.replace(/\s+/g, ' ').trim();
+
   let systemClass = 'Unknown';
   let system = 'Unknown';
 
-  const sigMatch = htmlString.match(/(?:Signatures\s*)?in\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})/i);
+  const sigMatch = cleanText.match(/(?:Signatures\s*)?in\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})/i);
   if (sigMatch) {
     systemClass = sigMatch[1].toUpperCase();
     system = sigMatch[2].toUpperCase();
   } else {
-    const titleMatch = htmlString.match(/<title[^>]*>.*?Wanderer\s*-\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4}).*?<\/title>/i) ||
-                       htmlString.match(/\b(C[1-6])\s*(J\d{6})\b/i);
-    if (titleMatch) {
-      systemClass = titleMatch[1].toUpperCase();
-      system = titleMatch[2].toUpperCase();
+    const locMatch = cleanText.match(/(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})\s*\((C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\)/i);
+    if (locMatch) {
+      system = locMatch[1].toUpperCase();
+      systemClass = locMatch[2].toUpperCase();
+    } else {
+      const titleMatch = cleanText.match(/\b(C[1-6])\s*(J\d{6})\b/i);
+      if (titleMatch) {
+        systemClass = titleMatch[1].toUpperCase();
+        system = titleMatch[2].toUpperCase();
+      }
     }
   }
 

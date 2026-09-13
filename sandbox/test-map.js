@@ -1,8 +1,9 @@
 // sandbox/test-map.js
 import { extractWandererSvgData } from '../content/extractor.js';
 import { extractWandererSignatures } from '../content/signatures-extractor.js';
+import { extractWandererPilots } from '../content/pilots-extractor.js';
 import { validateAndAlignRow, formatTacticalData } from '../lib/ai.js';
-import { formatSignaturesData } from '../lib/formatters.js';
+import { formatSignaturesData, formatPilotsData } from '../lib/formatters.js';
 
 const debugPanel = document.getElementById('debug-panel');
 const debugOutput = document.getElementById('debug-output');
@@ -37,6 +38,16 @@ if (btnTestSigs) {
   });
 }
 
+const btnTestPilots = document.getElementById('btnTestPilots');
+if (btnTestPilots) {
+  btnTestPilots.addEventListener('click', () => {
+    const data = extractWandererPilots();
+    const tsv = formatPilotsData(data, 'tsv');
+    debugPanel.style.display = 'block';
+    debugOutput.textContent = tsv;
+  });
+}
+
 // Listen for extension popup extraction queries
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -45,6 +56,9 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
       sendResponse(data);
     } else if (request.action === 'EXTRACT_WANDERER_SIGNATURES') {
       const data = extractWandererSignatures();
+      sendResponse(data);
+    } else if (request.action === 'EXTRACT_WANDERER_PILOTS') {
+      const data = extractWandererPilots();
       sendResponse(data);
     }
     return true;

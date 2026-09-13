@@ -177,6 +177,7 @@
       <button id="btnRunTest" class="btn-test">⚡ TEST SVG EXTRACTION</button>
       <button id="btnToggleFormat" class="btn-test">📋 SHOW TSV DUMP</button>
       <button id="btnTestSigs" class="btn-test" style="border-color: #f59e0b; color: #f59e0b;">🎯 TEST SIGS (J215758)</button>
+      <button id="btnTestPilots" class="btn-test" style="border-color: #10b981; color: #10b981;">👥 TEST LOCAL [2]</button>
     </div>
   </header>
 
@@ -346,6 +347,44 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Wanderer Active System Local Pilots Panel (Matches User Screenshot) -->
+      <div class="panel local-panel wanderer-overlay-widget" id="mockLocalPanel" style="position: absolute; top: 16px; right: 16px; width: 280px; background: rgba(10, 16, 26, 0.96); border: 1px solid #1e3a5f; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.85); font-family: 'JetBrains Mono', monospace; z-index: 100; overflow: hidden;">
+        <div class="panel-header" style="background: #0d1a2d; padding: 7px 12px; border-bottom: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+          <span class="title" style="color: #00e5ff; font-weight: 700;">Local [2]</span>
+          <span style="font-size: 10px; color: #64748b;">J215758 (C4)</span>
+        </div>
+        <div class="panel-body" style="padding: 6px 10px;">
+          <div class="pilot-row" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(30, 41, 59, 0.5);">
+            <div class="pilot-portrait">
+              <img src="https://images.evetech.net/characters/95000001/portrait?size=64" alt="Chrysabelle Ellecon" style="width: 32px; height: 32px; border-radius: 3px; border: 1px solid #334455;" />
+            </div>
+            <div class="pilot-info" style="flex: 1; overflow: hidden;">
+              <div class="pilot-name" style="color: #ffffff; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                Chrysabelle Ellecon <span style="color: #94a3b8; font-weight: 600;">[AP.MC]</span>
+              </div>
+              <div class="pilot-ship" style="display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                <span class="ship-name" style="color: #94a3b8; font-size: 9.5px;">Capsule - Chrysa...</span>
+                <img class="ship-icon" src="/icons/capsule.png" title="Capsule" alt="Capsule" style="width: 13px; height: 13px; opacity: 0.8;" />
+              </div>
+            </div>
+          </div>
+          <div class="pilot-row" style="display: flex; align-items: center; gap: 8px; padding: 6px 0;">
+            <div class="pilot-portrait">
+              <img src="https://images.evetech.net/characters/95000002/portrait?size=64" alt="Ultimate Pikie" style="width: 32px; height: 32px; border-radius: 3px; border: 1px solid #334455;" />
+            </div>
+            <div class="pilot-info" style="flex: 1; overflow: hidden;">
+              <div class="pilot-name" style="color: #ffffff; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                Ultimate Pikie <span style="color: #94a3b8; font-weight: 600;">[AP.MC]</span>
+              </div>
+              <div class="pilot-ship" style="display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                <span class="ship-name" style="color: #94a3b8; font-size: 9.5px;">Into the Breach</span>
+                <img class="ship-icon" src="/icons/nemesis.png" title="Nemesis" alt="Nemesis" style="width: 13px; height: 13px; opacity: 0.8;" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
