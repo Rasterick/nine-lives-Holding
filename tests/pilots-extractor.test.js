@@ -288,4 +288,60 @@ if (domResult.pilots[0].pilot !== 'Chrysabelle Ellecon' || domResult.pilots[1].p
   throw new Error(`DOM Walker Pilot parsing mismatch: ${JSON.stringify(domResult.pilots)}`);
 }
 
+// Test case for live user case: spaced corp tickers [ AP.MC ]
+const spacedMockDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {},
+  querySelectorAll(sel) {
+    if (sel === '*') {
+      const localCard = {
+        tagName: 'DIV',
+        className: 'panel local-panel',
+        parentElement: null,
+        querySelectorAll(q) {
+          if (q === '*') {
+            return [
+              {
+                tagName: 'DIV',
+                textContent: 'Mercy Creed [ AP.MC ]',
+                parentElement: null,
+                querySelectorAll: () => []
+              },
+              {
+                tagName: 'DIV',
+                textContent: 'Victor Rizzo [ AP.MC ]',
+                parentElement: null,
+                querySelectorAll: () => []
+              }
+            ];
+          }
+          return [];
+        }
+      };
+      return [
+        {
+          textContent: 'Local [2]',
+          parentElement: localCard
+        }
+      ];
+    }
+    return [];
+  },
+  querySelector() {
+    return null;
+  }
+};
+
+const spacedResult = extractWandererPilots(spacedMockDoc);
+if (!spacedResult.success || spacedResult.pilots.length !== 2) {
+  throw new Error(`Spaced corp extraction failed: ${JSON.stringify(spacedResult)}`);
+}
+if (spacedResult.pilots[0].pilot !== 'Mercy Creed' || spacedResult.pilots[0].corp !== 'AP.MC') {
+  throw new Error(`Spaced pilot 1 mismatch: ${JSON.stringify(spacedResult.pilots[0])}`);
+}
+if (spacedResult.pilots[1].pilot !== 'Victor Rizzo' || spacedResult.pilots[1].corp !== 'AP.MC') {
+  throw new Error(`Spaced pilot 2 mismatch: ${JSON.stringify(spacedResult.pilots[1])}`);
+}
+
 console.log('✅ Local Pilots Extractor tests passed!');
+

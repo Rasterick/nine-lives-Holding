@@ -40,6 +40,42 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       return txt || (el.textContent || '').replace(/\s+/g, ' ').trim();
     }
 
+    /**
+     * Extracts direct image URL from an img element or background-image CSS.
+     */
+    function extractMediaUrl(el) {
+      if (!el) return '';
+      // 1. Direct img element or child img
+      const img = el.tagName?.toLowerCase() === 'img' ? el : el.querySelector?.('img');
+      if (img) {
+        const src = img.getAttribute('src') || img.src || img.getAttribute('data-src') || img.currentSrc || '';
+        if (src && !src.startsWith('data:') && !/\/types\//i.test(src) && !/\/brackets\//i.test(src)) {
+          return src;
+        }
+      }
+
+      // 2. CSS background-image
+      const candidates = [el, ...Array.from(el.querySelectorAll?.('*') || [])];
+      for (const b of candidates) {
+        const style = b.getAttribute?.('style') || '';
+        const match = style.match(/url\(['"]?([^'")]+)['"]?\)/i);
+        if (match && !/\/types\//i.test(match[1]) && !/\/brackets\//i.test(match[1])) {
+          return match[1];
+        }
+        if (typeof window !== 'undefined' && window.getComputedStyle) {
+          try {
+            const comp = window.getComputedStyle(b).backgroundImage;
+            const compMatch = (comp || '').match(/url\(['"]?([^'")]+)['"]?\)/i);
+            if (compMatch && compMatch[1] && compMatch[1] !== 'none' && !/\/types\//i.test(compMatch[1]) && !/\/brackets\//i.test(compMatch[1])) {
+              return compMatch[1];
+            }
+          } catch {}
+        }
+      }
+
+      return '';
+    }
+
     // Search roots: main document and any accessible iframes
     const searchRoots = [doc];
     const iframes = Array.from(doc.querySelectorAll?.('iframe') || []);
@@ -136,7 +172,6 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     }
 
     // --- PHASE 3: Bound the Local Panel Container ---
-    // Walk up from matchedHeaderEl, stopping before escaping into multi-panel sidebar
     let localCard = matchedHeaderEl;
     while (
       localCard.parentElement &&
@@ -147,8 +182,8 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       localCard = localCard.parentElement;
     }
 
-    // Fallback: If localCard is still just the header itself or has no images, check closest panel/card
-    if (localCard === matchedHeaderEl || localCard.querySelectorAll?.('img')?.length === 0) {
+    // Fallback: If localCard is still just the header itself or has no images/content, check closest panel/card
+    if (localCard === matchedHeaderEl || (localCard.querySelectorAll?.('img')?.length === 0 && !/\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(localCard.textContent || ''))) {
       const closestPanel = matchedHeaderEl.closest?.('.panel, .card, [class*="panel"], [class*="card"], [class*="widget"]');
       if (closestPanel && !closestPanel.querySelector?.('table')) {
         localCard = closestPanel;
@@ -174,22 +209,48 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       // 1. Portrait URL
       let portraitUrl = '';
       if (pImg) {
-        portraitUrl = pImg.getAttribute('src') || pImg.src || '';
-      } else {
-        const imgEl = rowEl.querySelector('img[src*="character"], img[src*="portrait"], [class*="portrait"] img, img');
-        if (imgEl) {
-          const src = imgEl.getAttribute('src') || imgEl.src || '';
-          if (!/\/types\//i.test(src) && !/\/brackets\//i.test(src)) {
-            portraitUrl = src;
+        portraitUrl = extractMediaUrl(pImg) || pImg.getAttribute?.('src') || pImg.src || '';
+      }
+      if (!portraitUrl) {
+        // Look inside rowEl for character portrait
+        const imgCandidates = [];
+        try {
+          const imgs = rowEl.querySelectorAll?.('img');
+          if (imgs) imgCandidates.push(...Array.from(imgs));
+        } catch {}
+        try {
+          const styled = rowEl.querySelectorAll?.('[style*="url"], [style*="background"], [class*="portrait"], [class*="avatar"]');
+          if (styled) {
+            for (const el of styled) {
+              if (!imgCandidates.includes(el)) imgCandidates.push(el);
+            }
+          }
+        } catch {}
+
+        for (const c of imgCandidates) {
+          const url = extractMediaUrl(c);
+          if (url && (/characters/i.test(url) || /character/i.test(url) || c.classList?.contains?.('portrait') || c.closest?.('[class*="portrait"], [class*="avatar"]'))) {
+            portraitUrl = url;
+            break;
+          }
+        }
+        if (!portraitUrl && imgCandidates.length > 0) {
+          for (const c of imgCandidates) {
+            const url = extractMediaUrl(c);
+            if (url && !/\/types\//i.test(url) && !/\/brackets\//i.test(url)) {
+              portraitUrl = url;
+              break;
+            }
           }
         }
       }
 
       // 2. Pilot Name and Corp Ticker
+      // Supports "Pilot Name [CORP]" and "Pilot Name [ CORP ]" with spaces
       let pilotName = '';
       let corpTicker = '';
 
-      const corpMatch = rowText.match(/([A-Za-z0-9 '\-_]+?)\s*\[([A-Za-z0-9.\-_]{2,8})\]/);
+      const corpMatch = rowText.match(/([A-Za-z0-9 '\-_]+?)\s*\[\s*([A-Za-z0-9.\-_]{2,10})\s*\]/);
       if (corpMatch) {
         pilotName = clean(corpMatch[1]);
         corpTicker = clean(corpMatch[2]);
@@ -220,16 +281,32 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
 
       // 4. Ship Type
       let shipType = '';
-      const allRowImgs = Array.from(rowEl.querySelectorAll('img'));
-      const otherImgs = allRowImgs.filter(i => i !== pImg);
-      for (const sImg of otherImgs) {
-        shipType = sImg.getAttribute('title') ||
-                   sImg.getAttribute('alt') ||
-                   sImg.getAttribute('data-ship-type') ||
-                   sImg.getAttribute('aria-label') ||
-                   sImg.closest?.('[title]')?.getAttribute?.('title') ||
-                   sImg.closest?.('[data-tooltip]')?.getAttribute?.('data-tooltip') || '';
-        if (shipType) break;
+      const allRowImgs = [];
+      try {
+        const imgs = rowEl.querySelectorAll?.('img');
+        if (imgs) allRowImgs.push(...Array.from(imgs));
+      } catch {}
+      try {
+        const withTooltips = rowEl.querySelectorAll?.('[title], [data-tooltip], [aria-label]');
+        if (withTooltips) {
+          for (const el of withTooltips) {
+            if (!allRowImgs.includes(el)) allRowImgs.push(el);
+          }
+        }
+      } catch {}
+
+      for (const sImg of allRowImgs) {
+        const sUrl = sImg.getAttribute?.('src') || sImg.src || '';
+        if (portraitUrl && sUrl === portraitUrl) continue;
+        const title = sImg.getAttribute?.('title') ||
+                      sImg.getAttribute?.('alt') ||
+                      sImg.getAttribute?.('data-ship-type') ||
+                      sImg.getAttribute?.('aria-label') ||
+                      sImg.getAttribute?.('data-tooltip') || '';
+        if (title && !/^(portrait|avatar|close|edit|delete)$/i.test(title)) {
+          shipType = title;
+          break;
+        }
       }
 
       // Clean shipName if it repeats shipType from tooltip
@@ -247,7 +324,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         else if (/^Manticore/i.test(shipName)) shipType = 'Manticore';
         else {
           const dashParts = shipName.split(/\s*-\s*/);
-          if (dashParts.length > 1) {
+          if (dashParts.length > 1 && dashParts[0].length >= 3) {
             shipType = clean(dashParts[0]);
           }
         }
@@ -265,20 +342,42 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     }
 
     // Strategy 1: Find character portraits inside localCard
-    let portraitImgs = Array.from(localCard.querySelectorAll('img')).filter(img => {
-      const src = img.getAttribute('src') || '';
+    let portraitCandidates = [];
+    try {
+      const imgs = Array.from(localCard.querySelectorAll('img') || []);
+      portraitCandidates.push(...imgs);
+    } catch {}
+    try {
+      const bgEls = Array.from(localCard.querySelectorAll('[style*="url"], [style*="background"], [class*="portrait"], [class*="avatar"]') || []);
+      for (const el of bgEls) {
+        if (!portraitCandidates.includes(el)) portraitCandidates.push(el);
+      }
+    } catch {}
+
+    let portraitImgs = portraitCandidates.filter(el => {
+      const src = extractMediaUrl(el) || (el.getAttribute && el.getAttribute('src')) || el.src || '';
+      if (!src) return false;
       if (/\/types\//i.test(src) || /\/brackets\//i.test(src)) return false;
       return /characters/i.test(src) || /character/i.test(src) ||
-             img.classList?.contains('portrait') ||
-             img.parentElement?.classList?.contains('pilot-portrait') ||
-             img.closest?.('[class*="portrait"]');
+             el.classList?.contains?.('portrait') ||
+             el.classList?.contains?.('avatar') ||
+             el.parentElement?.classList?.contains?.('pilot-portrait') ||
+             el.closest?.('[class*="portrait"], [class*="avatar"]');
     });
+
+    if (portraitImgs.length === 0) {
+      portraitImgs = portraitCandidates.filter(el => {
+        const src = extractMediaUrl(el) || (el.getAttribute && el.getAttribute('src')) || el.src || '';
+        if (!src) return false;
+        return !/\/types\//i.test(src) && !/\/brackets\//i.test(src) && !/\/icons\//i.test(src);
+      });
+    }
 
     for (const pImg of portraitImgs) {
       let rowEl = pImg.parentElement;
       while (rowEl && rowEl !== localCard && rowEl !== doc.body) {
         const t = extractCleanNodeText(rowEl);
-        if (/\[[A-Za-z0-9.\-_]{2,8}\]/.test(t) || t.length > 10) {
+        if (/\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(t) || t.length > 10) {
           break;
         }
         if (!rowEl.parentElement || rowEl.parentElement === localCard || rowEl.parentElement === doc.body) {
@@ -293,16 +392,23 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     if (pilots.length === 0) {
       const allCardEls = Array.from(localCard.querySelectorAll('*'));
       const corpCandidates = allCardEls.filter(el => {
-        if (el === matchedHeaderEl || el.contains(matchedHeaderEl)) return false;
+        if (el === matchedHeaderEl || (el.contains && el.contains(matchedHeaderEl))) return false;
         if (el.closest && el.closest('table')) return false;
         const txt = (el.textContent || '').trim();
-        return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(txt) && txt.length < 150;
+        return /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(txt) && txt.length < 150;
       });
       // Take innermost matching elements
-      const innermost = corpCandidates.filter(el => !corpCandidates.some(other => other !== el && el.contains(other)));
+      const innermost = corpCandidates.filter(el => !corpCandidates.some(other => other !== el && el.contains && el.contains(other)));
       for (const el of innermost) {
-        const rowEl = el.closest('div[class*="row"], div[class*="entry"], li') || el.parentElement || el;
-        processPilotCandidate(rowEl);
+        let rowEl = el;
+        // Walk up to find the full row containing images or multiple siblings
+        while (rowEl && rowEl.parentElement && rowEl.parentElement !== localCard && rowEl.parentElement !== doc.body) {
+          const parentPilots = Array.from(rowEl.parentElement.children).filter(c => /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(c.textContent || ''));
+          if (parentPilots.length > 1) break;
+          if (rowEl.querySelectorAll?.('img, [style*="url"]').length >= 1) break;
+          rowEl = rowEl.parentElement;
+        }
+        processPilotCandidate(rowEl || el);
       }
     }
 
@@ -315,12 +421,18 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
           if (el.querySelector && el.querySelector('table')) return false;
           const txt = (el.textContent || '').trim();
           if (/Signatures\s*in|Structures/i.test(txt)) return false;
-          return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(txt) && txt.length < 120;
+          return /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(txt) && txt.length < 120;
         });
-        const innermost = corpPageEls.filter(el => !corpPageEls.some(other => other !== el && el.contains(other)));
+        const innermost = corpPageEls.filter(el => !corpPageEls.some(other => other !== el && el.contains && el.contains(other)));
         for (const el of innermost) {
-          const rowEl = el.closest('div[class*="row"], div[class*="entry"], li') || el.parentElement || el;
-          processPilotCandidate(rowEl);
+          let rowEl = el;
+          while (rowEl && rowEl.parentElement && rowEl.parentElement !== doc.body) {
+            const parentPilots = Array.from(rowEl.parentElement.children).filter(c => /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(c.textContent || ''));
+            if (parentPilots.length > 1) break;
+            if (rowEl.querySelectorAll?.('img, [style*="url"]').length >= 1) break;
+            rowEl = rowEl.parentElement;
+          }
+          processPilotCandidate(rowEl || el);
         }
         if (pilots.length > 0) break;
       }
@@ -443,11 +555,11 @@ export function extractWandererPilotsFromHtml(htmlString) {
     let pilot = '';
     let corp = '';
     const nameMatch = blockContent.match(/class=["'][^"']*(?:pilot-name|title|name)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|span)>/i) ||
-                      blockContent.match(/([A-Za-z0-9 '\-_]+?)\s*\[([A-Za-z0-9.\-_]{2,8})\]/);
+                      blockContent.match(/([A-Za-z0-9 '\-_]+?)\s*\[\s*([A-Za-z0-9.\-_]{2,10})\s*\]/);
 
     if (nameMatch) {
       const raw = nameMatch[1].replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
-      const splitCorp = raw.match(/^([A-Za-z0-9 '\-_]+?)(?:\s*\[([A-Za-z0-9.\-_]{2,8})\])?$/);
+      const splitCorp = raw.match(/^([A-Za-z0-9 '\-_]+?)(?:\s*\[\s*([A-Za-z0-9.\-_]{2,10})\s*\])?$/);
       if (splitCorp) {
         pilot = splitCorp[1].trim();
         corp = splitCorp[2] ? splitCorp[2].trim() : '';
