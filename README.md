@@ -32,10 +32,7 @@ A Manifest V3 Google Chrome extension that extracts EVE Online wormhole chain ma
 2. Navigate to `chrome://extensions` in your address bar.
 3. Toggle on **Developer mode** in the top right corner.
 4. Click the **Load unpacked** button in the top left.
-5. Select this extension directory:
-   ```
-   c:\Users\mitch\OneDrive\Documents\AstrumExtension
-   ```
+5. Select the downloaded or cloned `AstrumExtension` directory (the folder where `manifest.json` is located).
 6. The **NINE LIVES Console - Tactical Ingest** extension icon will now appear in your browser toolbar. Pin it for quick access!
 
 ---
@@ -55,7 +52,7 @@ The extension uses Chrome's native on-device `LanguageModel` API. To ensure Gemi
 
 ## Testing Offline on Your Laptop
 
-1. In Chrome, open `c:\Users\mitch\OneDrive\Documents\AstrumExtension\sandbox\test-map.html` (or click `[ TEST MAP SANDBOX ]` in the popup footer).
+1. In Chrome, open `sandbox/test-map.html` in your extension folder (or click `[ TEST MAP SANDBOX ]` in the popup footer).
 2. Click the **NINE LIVES Tactical Extension** icon in your toolbar.
 3. Notice the status indicator shows `● SYNCED` and the active system is verified.
 4. Click **`Get Wanderer Systems [W-SPACE]`**.

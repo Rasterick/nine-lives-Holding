@@ -78,8 +78,22 @@ The **NINE LIVES Tactical Extension** is a Manifest V3 browser extension built f
 2. Navigate to `chrome://extensions` in the address bar.
 3. Toggle on **Developer mode** in the top-right corner.
 4. Click **Load unpacked** in the top-left corner.
-5. Select the repository root folder (`c:\Users\mitch\OneDrive\Documents\AstrumExtension`).
+5. Select the downloaded/extracted folder where `manifest.json` is located (e.g., `AstrumExtension/`).
 6. Pin the **NINE LIVES Console** icon to your Chrome toolbar.
+
+### Packaging & Distributing to Fleet / Corp Members
+When sharing this extension with corp members or alliance scouts:
+
+* **Recommended Method: Distribute as a `.zip` Archive**
+  1. Compress the extension directory containing `manifest.json` into a `.zip` file (e.g. `NINELIVES-TacticalExtension-v2.0.zip`).
+  2. Fleet members download the `.zip`, right-click -> **Extract All**.
+  3. They go to `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the unzipped folder.
+  4. *Why this is best:* Chrome allows unpacked developer extensions to run without restriction, requiring no developer fee or enterprise policies.
+
+* **Why NOT to use "Pack Extension" (`.crx`):**
+  - Clicking "Pack extension" in `chrome://extensions` generates a `.crx` file and a `.pem` private key.
+  - However, modern Google Chrome **blocks off-store `.crx` installations** by default for security, throwing: *"Apps, extensions, and user scripts cannot be added from this website"* or disabling it on next launch.
+  - Unless your users run a corporate Windows Group Policy, `.crx` files will not load smoothly for everyday fleet members. Distributing the `.zip` for **Load unpacked** is the standard and most reliable method.
 
 ### Manifest Permissions Justification
 * `"tabs"`: Required to read the current tab URL and ensure the user is on an authorized Wanderer mapping instance.
