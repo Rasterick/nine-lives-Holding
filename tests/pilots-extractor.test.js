@@ -541,6 +541,89 @@ for (let i = 0; i < expectedPilots.length; i++) {
   }
 }
 
-console.log('✅ Local Pilots Extractor tests passed!');
+// Test case 5: User 7-pilot scenario with Ship Names Checked (Michiko Yukiko in Crane with 'Mission runer' tag)
+const sevenPilotsCheckedDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {},
+  querySelectorAll(sel) {
+    if (sel === '*') {
+      const pilotsData = [
+        { name: 'Abon Riff', corp: 'AP.MC', text: 'Abon Riff [ AP.MC ] ☜☠☞ Palliser', charId: 92029163, typeId: 33470, expectedType: 'Stratios', expectedName: '☜☠☞ Palliser' },
+        { name: 'Chrysabelle Ellecon', corp: 'AP.MC', text: 'Chrysabelle Ellecon [ AP.MC ] Capsule - Chrysabelle Ellecon', charId: 93789049, typeId: 670, expectedType: 'Capsule', expectedName: 'Capsule - Chrysabelle Ellecon' },
+        { name: 'Mercy Creed', corp: 'AP.MC', text: 'Mercy Creed [ AP.MC ] Occator', charId: 94656274, typeId: 12745, expectedType: 'Occator', expectedName: 'Occator' },
+        { name: 'Michiko Yukiko', corp: 'AP.MC', text: 'Michiko Yukiko [ AP.MC ] Mission runer', charId: 2123051982, typeId: 12729, expectedType: 'Crane', expectedName: 'Mission runer' },
+        { name: 'Salva Coline', corp: 'AP.MC', text: 'Salva Coline [ AP.MC ] ☜☠☞ Tapir', charId: 92996645, typeId: 33468, expectedType: 'Astero', expectedName: '☜☠☞ Tapir' },
+        { name: 'Tyrom Hir', corp: 'AP.MC', text: 'Tyrom Hir [ AP.MC ] ☜☠☞ Vindictive', charId: 1906220295, typeId: 33470, expectedType: 'Stratios', expectedName: '☜☠☞ Vindictive' },
+        { name: 'Victor Rizzo', corp: 'AP.MC', text: 'Victor Rizzo [ AP.MC ] Capsule - Victor Rizzo', charId: 95727715, typeId: 670, expectedType: 'Capsule', expectedName: 'Capsule - Victor Rizzo' }
+      ];
+
+      const rows = pilotsData.map(p => ({
+        tagName: 'DIV',
+        className: 'pilot-row',
+        textContent: p.text,
+        querySelectorAll(q) {
+          if (q === 'img') {
+            return [
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? `https://images.evetech.net/characters/${p.charId}/portrait` : (a === 'alt' ? p.name : null) },
+              { tagName: 'IMG', getAttribute: (a) => a === 'src' ? `https://images.evetech.net/types/${p.typeId}/icon` : null, closest: () => null }
+            ];
+          }
+          if (q.includes('title')) {
+            return [
+              { getAttribute: (a) => a === 'title' ? p.expectedName : null, closest: () => null }
+            ];
+          }
+          return [];
+        }
+      }));
+
+      const localCard = {
+        tagName: 'DIV',
+        className: 'panel local-panel',
+        parentElement: null,
+        querySelectorAll(q) {
+          if (q === '*') return rows;
+          return [];
+        }
+      };
+
+      return [
+        {
+          textContent: 'Local [7]',
+          parentElement: localCard
+        }
+      ];
+    }
+    return [];
+  },
+  querySelector() {
+    return null;
+  }
+};
+
+const sevenResult = extractWandererPilots(sevenPilotsCheckedDoc);
+if (!sevenResult.success || sevenResult.pilots.length !== 7) {
+  throw new Error(`Seven pilots extraction failed: ${JSON.stringify(sevenResult)}`);
+}
+
+const expectedSeven = [
+  { pilot: 'Abon Riff', corp: 'AP.MC', shipType: 'Stratios', shipName: '☜☠☞ Palliser' },
+  { pilot: 'Chrysabelle Ellecon', corp: 'AP.MC', shipType: 'Capsule', shipName: 'Capsule - Chrysabelle Ellecon' },
+  { pilot: 'Mercy Creed', corp: 'AP.MC', shipType: 'Occator', shipName: 'Occator' },
+  { pilot: 'Michiko Yukiko', corp: 'AP.MC', shipType: 'Crane', shipName: 'Mission runer' },
+  { pilot: 'Salva Coline', corp: 'AP.MC', shipType: 'Astero', shipName: '☜☠☞ Tapir' },
+  { pilot: 'Tyrom Hir', corp: 'AP.MC', shipType: 'Stratios', shipName: '☜☠☞ Vindictive' },
+  { pilot: 'Victor Rizzo', corp: 'AP.MC', shipType: 'Capsule', shipName: 'Capsule - Victor Rizzo' }
+];
+
+for (let i = 0; i < expectedSeven.length; i++) {
+  const exp = expectedSeven[i];
+  const actual = sevenResult.pilots[i];
+  if (actual.pilot !== exp.pilot || actual.corp !== exp.corp || actual.shipType !== exp.shipType || actual.shipName !== exp.shipName) {
+    throw new Error(`Seven Pilots ${i} (${exp.pilot}) mismatch! Expected: ${JSON.stringify(exp)}, Got: ${JSON.stringify(actual)}`);
+  }
+}
+
+console.log('✅ Local Pilots Extractor tests passed (including checked & unchecked ship names)!');
 
 

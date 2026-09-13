@@ -286,52 +286,81 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         }
       }
 
-      // 4. Ship Type
+      // 4. Resolve Ship Type via EVE Type ID or known hulls
       let shipType = '';
-      const allRowImgs = [];
-      try {
-        const imgs = rowEl.querySelectorAll?.('img');
-        if (imgs) allRowImgs.push(...Array.from(imgs));
-      } catch {}
-      try {
-        const withTooltips = rowEl.querySelectorAll?.('[title], [data-tooltip], [aria-label]');
-        if (withTooltips) {
-          for (const el of withTooltips) {
-            if (!allRowImgs.includes(el)) allRowImgs.push(el);
-          }
-        }
-      } catch {}
+      const candidateSet = new Set([
+        rowEl,
+        ...Array.from(rowEl.querySelectorAll?.('*') || []),
+        ...Array.from(rowEl.querySelectorAll?.('img') || []),
+        ...Array.from(rowEl.querySelectorAll?.('[title], [alt], [data-tooltip], [aria-label]') || [])
+      ]);
+      const allRowCandidateEls = Array.from(candidateSet);
 
-      // 4. Resolve Ship Type via EVE Type ID from ship icon image URL
-      for (const sImg of allRowImgs) {
-        if (sImg === pImg) continue;
-        const sMedia = extractMediaUrl(sImg) || sImg.getAttribute?.('src') || sImg.src || '';
-        const typeMatch = sMedia.match(/\/types\/(\d+)\//i);
-        if (typeMatch && EVE_SHIPS[typeMatch[1]]) {
-          shipType = EVE_SHIPS[typeMatch[1]];
+      function matchEveTypeId(str) {
+        if (!str) return null;
+        const m = str.match(/\/types\/(\d+)/i) || str.match(/\/type\/(\d+)/i);
+        if (m && EVE_SHIPS[m[1]]) {
+          return EVE_SHIPS[m[1]];
+        }
+        return null;
+      }
+
+      // 4a. Check src, data-src, currentSrc, href, style, and data attributes for /types/{typeId}/
+      for (const el of allRowCandidateEls) {
+        if (el === pImg) continue;
+        if (pImg && (el.contains?.(pImg) || pImg.contains?.(el))) continue;
+        if (el.closest?.('[class*="portrait"], [class*="avatar"], [class*="pilot-image"], [class*="pilot-portrait"]')) continue;
+
+        // Check image src / data-src / currentSrc / href
+        const src = el.getAttribute?.('src') || el.src || el.getAttribute?.('data-src') || el.currentSrc || el.getAttribute?.('href') || '';
+        let found = matchEveTypeId(src);
+        if (found) {
+          shipType = found;
+          break;
+        }
+
+        // Check inline style (e.g. background-image: url('.../types/33470/icon'))
+        const style = el.getAttribute?.('style') || '';
+        found = matchEveTypeId(style);
+        if (found) {
+          shipType = found;
+          break;
+        }
+
+        // Check computed style for background-image
+        if (typeof window !== 'undefined' && window.getComputedStyle) {
+          try {
+            const comp = window.getComputedStyle(el).backgroundImage || '';
+            found = matchEveTypeId(comp);
+            if (found) {
+              shipType = found;
+              break;
+            }
+          } catch {}
+        }
+
+        // Check data attributes like data-type-id, data-type, data-item-id
+        const dataId = el.getAttribute?.('data-type-id') || el.getAttribute?.('data-type') || el.getAttribute?.('data-item-id') || '';
+        if (dataId && EVE_SHIPS[dataId]) {
+          shipType = EVE_SHIPS[dataId];
           break;
         }
       }
 
-      // If not resolved from type ID, check tooltips/titles
+      // 4b. If not resolved from type ID, check tooltips, titles, alt, aria-label, data-tooltip
       if (!shipType) {
-        for (const sImg of allRowImgs) {
-          if (sImg === pImg) continue;
-          if (pImg && (sImg.contains?.(pImg) || pImg.contains?.(sImg))) continue;
-          if (sImg.closest?.('[class*="portrait"], [class*="avatar"], [class*="pilot-image"], [class*="pilot-portrait"]')) continue;
+        for (const el of allRowCandidateEls) {
+          if (el === pImg) continue;
+          if (pImg && (el.contains?.(pImg) || pImg.contains?.(el))) continue;
+          if (el.closest?.('[class*="portrait"], [class*="avatar"], [class*="pilot-image"], [class*="pilot-portrait"]')) continue;
 
-          const sMedia = extractMediaUrl(sImg) || sImg.getAttribute?.('src') || sImg.src || '';
-          if (portraitUrl && sMedia && (sMedia === portraitUrl || sMedia.includes(portraitUrl) || portraitUrl.includes(sMedia) || /characters/i.test(sMedia))) {
-            continue;
-          }
-
-          const rawTitle = sImg.getAttribute?.('title') ||
-                           sImg.getAttribute?.('alt') ||
-                           sImg.getAttribute?.('data-ship-type') ||
-                           sImg.getAttribute?.('aria-label') ||
-                           sImg.getAttribute?.('data-tooltip') ||
-                           sImg.closest?.('[title]')?.getAttribute?.('title') ||
-                           sImg.closest?.('[data-tooltip]')?.getAttribute?.('data-tooltip') || '';
+          const rawTitle = el.getAttribute?.('title') ||
+                           el.getAttribute?.('alt') ||
+                           el.getAttribute?.('data-ship-type') ||
+                           el.getAttribute?.('aria-label') ||
+                           el.getAttribute?.('data-tooltip') ||
+                           el.closest?.('[title]')?.getAttribute?.('title') ||
+                           el.closest?.('[data-tooltip]')?.getAttribute?.('data-tooltip') || '';
 
           if (!rawTitle) continue;
 
@@ -358,8 +387,16 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
             continue;
           }
 
-          shipType = title;
-          break;
+          // Check if matches an exact known ship hull
+          const matchedHull = Object.values(EVE_SHIPS).find(h => h.toLowerCase() === title.toLowerCase());
+          if (matchedHull) {
+            shipType = matchedHull;
+            break;
+          }
+
+          if (!shipType && title.length >= 3 && title.length <= 40) {
+            shipType = title;
+          }
         }
       }
 
@@ -376,17 +413,44 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         } else if (/^Manticore/i.test(shipName)) {
           shipType = 'Manticore';
         } else {
-          const dashParts = shipName.split(/\s*-\s*/);
-          if (dashParts.length > 1 && dashParts[0].length >= 3) {
-            const possible = clean(dashParts[0]);
-            if (Object.values(EVE_SHIPS).some(v => v.toLowerCase() === possible.toLowerCase())) {
-              shipType = possible;
+          const exactHull = Object.values(EVE_SHIPS).find(h => h.toLowerCase() === shipName.toLowerCase());
+          if (exactHull) {
+            shipType = exactHull;
+          } else {
+            const dashParts = shipName.split(/\s*-\s*/);
+            if (dashParts.length > 1 && dashParts[0].length >= 3) {
+              const possible = clean(dashParts[0]);
+              const found = Object.values(EVE_SHIPS).find(v => v.toLowerCase() === possible.toLowerCase());
+              if (found) {
+                shipType = found;
+              }
             }
           }
         }
       }
 
-      // 6. Ensure both shipName and shipType are populated
+      // 6. If shipName currently matches shipType (e.g. "Ship name" checkbox was unchecked in Wanderer),
+      // check if the custom ship name is stored in title attributes or data-ship-name attributes
+      if (shipName && shipType && shipName.toLowerCase() === shipType.toLowerCase()) {
+        for (const el of allRowCandidateEls) {
+          if (el === pImg) continue;
+          const t = el.getAttribute?.('title') ||
+                    el.getAttribute?.('data-ship-name') ||
+                    el.getAttribute?.('data-tag') ||
+                    el.getAttribute?.('data-name') || '';
+          if (!t) continue;
+          const cleaned = clean(t);
+          if (cleaned && cleaned.toLowerCase() !== shipType.toLowerCase() &&
+              cleaned.toLowerCase() !== pilotName.toLowerCase() &&
+              cleaned.toLowerCase() !== corpTicker.toLowerCase() &&
+              !/^(portrait|avatar|close|edit|delete|dock|undock|docked|undocked|station|structure|ship\s*name)$/i.test(cleaned)) {
+            shipName = cleaned;
+            break;
+          }
+        }
+      }
+
+      // 7. Ensure both shipName and shipType are populated
       if (shipName) {
         shipName = clean(shipName.replace(/[\s\-–—:]+$/, ''));
       }
@@ -441,13 +505,36 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     }
 
     for (const pImg of portraitImgs) {
-      let rowEl = pImg.parentElement;
-      while (rowEl && rowEl !== localCard && rowEl !== doc.body) {
-        const t = extractCleanNodeText(rowEl);
-        if (/\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(t) || t.length > 10) {
+      // Find the outermost element representing this single pilot's row
+      // Climb up until rowEl.parentElement contains multiple pilot portraits or is localCard/body
+      let rowEl = pImg;
+      while (rowEl && rowEl.parentElement && rowEl.parentElement !== localCard && rowEl.parentElement !== doc.body) {
+        let multiPortraits = false;
+        try {
+          if (typeof rowEl.parentElement.contains === 'function') {
+            const contained = portraitImgs.filter(img => {
+              try { return rowEl.parentElement.contains(img); } catch { return false; }
+            });
+            if (contained.length > 1) multiPortraits = true;
+          } else if (rowEl.parentElement.querySelectorAll) {
+            const imgs = Array.from(rowEl.parentElement.querySelectorAll('img') || []);
+            const pCount = imgs.filter(i => /characters/i.test(i.getAttribute?.('src') || i.src || '')).length;
+            if (pCount > 1) multiPortraits = true;
+          }
+        } catch {}
+        if (multiPortraits) {
+          // rowEl.parentElement contains multiple pilots, so rowEl is THIS pilot's full row container!
           break;
         }
-        if (!rowEl.parentElement || rowEl.parentElement === localCard || rowEl.parentElement === doc.body) {
+        // Don't climb into tables or header containers
+        if (rowEl.parentElement.querySelector?.('table')) break;
+        if (/Local\s*\[/i.test(rowEl.parentElement.textContent || '') && rowEl.parentElement.querySelector?.('button, input, [class*="header"]')) {
+          break;
+        }
+        // If rowEl already has corp ticker and parent has no corp ticker, don't climb further
+        const currentText = extractCleanNodeText(rowEl);
+        const parentText = extractCleanNodeText(rowEl.parentElement);
+        if (/\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(currentText) && !/\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(parentText)) {
           break;
         }
         rowEl = rowEl.parentElement;
@@ -472,7 +559,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         while (rowEl && rowEl.parentElement && rowEl.parentElement !== localCard && rowEl.parentElement !== doc.body) {
           const parentPilots = Array.from(rowEl.parentElement.children).filter(c => /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(c.textContent || ''));
           if (parentPilots.length > 1) break;
-          if (rowEl.querySelectorAll?.('img, [style*="url"]').length >= 1) break;
+          if (rowEl.parentElement.querySelector?.('table')) break;
           rowEl = rowEl.parentElement;
         }
         processPilotCandidate(rowEl || el);
@@ -496,7 +583,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
           while (rowEl && rowEl.parentElement && rowEl.parentElement !== doc.body) {
             const parentPilots = Array.from(rowEl.parentElement.children).filter(c => /\[\s*[A-Za-z0-9.\-_]{2,10}\s*\]/.test(c.textContent || ''));
             if (parentPilots.length > 1) break;
-            if (rowEl.querySelectorAll?.('img, [style*="url"]').length >= 1) break;
+            if (rowEl.parentElement.querySelector?.('table')) break;
             rowEl = rowEl.parentElement;
           }
           processPilotCandidate(rowEl || el);
