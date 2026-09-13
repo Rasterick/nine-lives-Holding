@@ -17,11 +17,12 @@ A Manifest V3 Google Chrome extension that extracts EVE Online wormhole chain ma
   - **Nullsec Alphanumeric**: `38G6-L`, `N-K4Q0`, `U-7RBK`, `XPJ1-6`, `6-UCYU`
   - **Named Systems**: `Jita`, `Amamake`, `Thera`, `Poitot`, `Hek`, `Dodixie`
 - **Configurable URL Verification**: Gear icon opens tactical settings to allow custom corp Wanderer domains (e.g., `https://wanderer.mycorp.com/*`), while including `http://localhost:*` by default.
-- **Offline Test Sandbox**: Includes `sandbox/test-map.html` with authentic Wanderer SVG topology so you can test end-to-end on your laptop immediately without live corp VPN credentials.
-- **Visual Button States**:
-  - `Get Wanderer Systems [W-SPACE]`: Active, armed with live cyan HUD highlights.
-  - `Get Wanderer Scan Data [D-SCAN]`: Visually rendered in amber, deactivated in tactical standby (`[STANDBY // PHASE 2]`).
-  - `Get Pilots in System [LOCAL]`: Visually rendered in emerald, deactivated in tactical standby (`[STANDBY // PHASE 2]`).
+- **Offline Test Sandbox**: Includes `sandbox/test-map.html` with authentic Wanderer SVG topology, signatures tables, and local roster panels so you can test end-to-end on your laptop immediately without live corp VPN credentials.
+- **Visual Button States (All 3 Modules Fully Armed)**:
+  - `Get Wanderer Systems [W-SPACE]`: Active & armed with neon cyan HUD highlights.
+  - `Get System Signatures [SIGS]`: Active & armed with amber HUD highlights.
+  - `Get Pilots in System [LOCAL]`: Active & armed with emerald HUD highlights, automated "Ship name" checking, and hover telemetry.
+- **RAG-Searchable Technical Manual**: Detailed documentation is available in [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
 
 ---
 
