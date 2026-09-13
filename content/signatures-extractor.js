@@ -16,9 +16,44 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
       return (str || '').replace(/\s+/g, ' ').trim();
     }
 
-    function extractCleanCellText(cell) {
-      if (!cell) return '';
-      return clean(cell.textContent);
+    /**
+     * Walks DOM node tree and extracts text pieces joined by spaces.
+     * Prevents text in adjacent spans from being glued together without whitespace.
+     */
+    function extractCleanNodeText(el) {
+      if (!el) return '';
+      const pieces = [];
+      function walk(n) {
+        if (n.nodeType === 3) {
+          const val = (n.nodeValue || '').trim();
+          if (val) pieces.push(val);
+        } else if (n.nodeType === 1) {
+          // Skip icons and SVGs
+          if (n.tagName && (n.tagName.toLowerCase() === 'svg' || n.classList?.contains('icon'))) return;
+          for (const child of n.childNodes) {
+            walk(child);
+          }
+        }
+      }
+      walk(el);
+      let text = pieces.join(' ').replace(/\s+/g, ' ').trim();
+
+      // Defense-in-depth: Normalize wormhole target strings if glued without spaces
+      // e.g. AC247C3J172701 -> A C247 C3 J172701
+      // e.g. DX877C4J120409 -> D X877 C4 J120409
+      // e.g. EU574C6J120512 -> E U574 C6 J120512
+      // e.g. BH900C5J141204 -> B H900 C5 J141204
+      const whGlued = text.match(/^([A-Z])\s*([A-Z0-9]{4})\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven|HS|LS|NS)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})$/i);
+      if (whGlued) {
+        text = `${whGlued[1].toUpperCase()} ${whGlued[2].toUpperCase()} ${whGlued[3].toUpperCase()} ${whGlued[4].toUpperCase()}`;
+      } else {
+        const leadGlued = text.match(/^([A-Z])([A-Z]\d{3})\b/);
+        if (leadGlued) {
+          text = text.replace(/^([A-Z])([A-Z]\d{3})/, '$1 $2');
+        }
+      }
+
+      return text;
     }
 
     function extractSigId(text) {
@@ -34,16 +69,6 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
       'COSMIC ANOMALY', 'COSMIC SIGNATURE'
     ]);
 
-    function isSigGroup(text) {
-      if (!text) return false;
-      const u = clean(text).toUpperCase();
-      if (KNOWN_GROUPS.has(u)) return true;
-      for (const g of KNOWN_GROUPS) {
-        if (u.includes(g)) return true;
-      }
-      return false;
-    }
-
     // Search roots: main document and any accessible iframes
     const searchRoots = [doc];
     const iframes = Array.from(doc.querySelectorAll?.('iframe') || []);
@@ -57,7 +82,6 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
     let detectedClass = 'Unknown';
     let headerTextSample = '';
     let matchedHeaderEl = null;
-    let targetTable = null;
     let strategyUsed = 'NONE';
     const allTableHeadersSample = [];
 
@@ -65,12 +89,11 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
     for (const root of searchRoots) {
       const allEls = Array.from(root.querySelectorAll('*'));
       
-      // Find element containing "Signatures in"
+      // Find element containing "Signatures in" or "Signatures"
       for (const el of allEls) {
-        const txt = clean(el.textContent);
-        if (/Signatures\s+in/i.test(txt)) {
-          // If this element has direct text or small child count, it's our header anchor
-          if (txt.length < 150) {
+        if (/Signatures\s*in/i.test(el.textContent)) {
+          const txt = extractCleanNodeText(el);
+          if (txt.length < 200) {
             matchedHeaderEl = el;
             headerTextSample = txt;
             break;
@@ -80,35 +103,45 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
       if (matchedHeaderEl) break;
     }
 
-    // Parse system and class from header text if found
+    // Parse system and class from header text
     if (headerTextSample) {
-      // Look for Class: C1-C6, Highsec, Lowsec, Nullsec, Pochven
-      const classMatch = headerTextSample.match(/\b(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\b/i);
-      if (classMatch) {
-        detectedClass = classMatch[1].toUpperCase();
-      }
-
-      // Look for System: J-space J###### or Nullsec/K-Space
-      const jMatch = headerTextSample.match(/\b(J\d{6})\b/i);
-      if (jMatch) {
-        detectedSystem = jMatch[1].toUpperCase();
+      // 1. Direct regex matching "Signatures in C4 J215758", "in C4 J215758", or "inC4J215758"
+      const directMatch = headerTextSample.match(/(?:Signatures\s*)?in\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})/i);
+      if (directMatch) {
+        detectedClass = directMatch[1].toUpperCase();
+        detectedSystem = directMatch[2].toUpperCase();
       } else {
-        const sysMatch = headerTextSample.match(/\b([0-9A-Z]{1,4}-[0-9A-Z]{1,4})\b/i);
-        if (sysMatch) {
-          detectedSystem = sysMatch[1].toUpperCase();
+        // Fallback: match Class
+        const classMatch = headerTextSample.match(/\b(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\b/i) ||
+                           headerTextSample.match(/in\s*(C[1-6])/i);
+        if (classMatch) {
+          detectedClass = classMatch[1].toUpperCase();
+        }
+
+        // Fallback: match System (J-space J###### or Nullsec code)
+        const jMatch = headerTextSample.match(/\b(J\d{6})\b/i);
+        if (jMatch) {
+          detectedSystem = jMatch[1].toUpperCase();
         } else {
-          // Check for named system words (excluding 'Signatures', 'in', 'Lazy', 'delete')
-          const words = headerTextSample.split(/\s+/);
-          for (const w of words) {
-            const cleanW = w.replace(/[^a-zA-Z0-9\-]/g, '');
-            if (
-              cleanW.length >= 3 &&
-              !/^(Signatures|in|Lazy|delete|Filter|Search|Close|Add|Sort)$/i.test(cleanW) &&
-              !/^(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)$/i.test(cleanW) &&
-              !/^\d+$/.test(cleanW)
-            ) {
-              detectedSystem = cleanW;
-              break;
+          const sysMatch = headerTextSample.match(/\b([0-9A-Z]{1,4}-[0-9A-Z]{1,4})\b/i);
+          if (sysMatch) {
+            detectedSystem = sysMatch[1].toUpperCase();
+          } else {
+            // Find named system words, strictly filtering out UI words
+            const words = headerTextSample.split(/\s+/);
+            for (const w of words) {
+              const cleanW = w.replace(/[^a-zA-Z0-9\-]/g, '');
+              if (
+                cleanW.length >= 3 &&
+                !/^(Signatures|in|Lazy|delete|Filter|Search|Close|Add|Sort)$/i.test(cleanW) &&
+                !/^(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)$/i.test(cleanW) &&
+                !/^\d+$/.test(cleanW) &&
+                !cleanW.startsWith('in') &&
+                !cleanW.endsWith('Lazy')
+              ) {
+                detectedSystem = cleanW;
+                break;
+              }
             }
           }
         }
@@ -118,7 +151,7 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
     // --- PHASE 2: Find Signatures Table / Grid ---
     let signatures = [];
 
-    // Search Strategy 1: Look for table near the matched header
+    // Candidate containers starting near header up to document body
     const candidateContainers = [];
     if (matchedHeaderEl) {
       let curr = matchedHeaderEl;
@@ -127,18 +160,15 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
         curr = curr.parentElement;
       }
     }
-    // Also include document bodies
     for (const root of searchRoots) {
       if (root.body) candidateContainers.push(root.body);
     }
 
     for (const container of candidateContainers) {
-      // Find all <table> elements
       const tables = Array.from(container.querySelectorAll('table'));
       for (const tbl of tables) {
-        // Inspect headers
         const ths = Array.from(tbl.querySelectorAll('th, thead td, tr:first-child td, [role="columnheader"]'));
-        const thTexts = ths.map(th => clean(th.textContent).toLowerCase());
+        const thTexts = ths.map(th => extractCleanNodeText(th).toLowerCase());
         if (thTexts.length > 0) {
           allTableHeadersSample.push(thTexts.slice(0, 5).join(' | '));
         }
@@ -153,10 +183,8 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
           else if (/\binfo\b/i.test(t) && infoIdx === -1) infoIdx = idx;
         });
 
-        // If table has at least Id or Group header, or rows with cosmic sigs
         const rows = Array.from(tbl.querySelectorAll('tbody tr, tr')).filter(r => !r.querySelector('th'));
         if (rows.length > 0) {
-          // Check if rows have signature pattern
           let hasSigRow = false;
           for (const r of rows.slice(0, 5)) {
             if (/\b[A-Z]{3}-\d{3}\b/i.test(r.textContent)) {
@@ -166,7 +194,6 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
           }
 
           if (idIdx !== -1 || grpIdx !== -1 || hasSigRow) {
-            targetTable = tbl;
             strategyUsed = 'HTML_TABLE_EXACT';
             if (idIdx === -1) idIdx = 0;
             if (grpIdx === -1) grpIdx = 1;
@@ -175,10 +202,10 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
             for (const r of rows) {
               const cells = Array.from(r.querySelectorAll('td, [role="cell"]'));
               if (cells.length >= 2) {
-                const rawId = extractCleanCellText(cells[idIdx] || cells[0]);
+                const rawId = extractCleanNodeText(cells[idIdx] || cells[0]);
                 const id = extractSigId(rawId);
-                const group = extractCleanCellText(cells[grpIdx] || cells[1]) || '-';
-                const info = cells[infoIdx] ? extractCleanCellText(cells[infoIdx]) : '-';
+                const group = extractCleanNodeText(cells[grpIdx] || cells[1]) || '-';
+                const info = cells[infoIdx] ? extractCleanNodeText(cells[infoIdx]) : '-';
 
                 if (id && id !== '-') {
                   signatures.push({ id, group, info });
@@ -201,10 +228,10 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
         for (const r of gridRows) {
           const cells = Array.from(r.querySelectorAll('[role="cell"], div[class*="cell"], div[class*="Cell"]'));
           if (cells.length >= 2) {
-            const rawId = extractCleanCellText(cells[0]);
+            const rawId = extractCleanNodeText(cells[0]);
             const id = extractSigId(rawId);
-            const group = extractCleanCellText(cells[1]) || '-';
-            const info = cells[2] ? extractCleanCellText(cells[2]) : '-';
+            const group = extractCleanNodeText(cells[1]) || '-';
+            const info = cells[2] ? extractCleanNodeText(cells[2]) : '-';
 
             if (id && id !== '-' && /\b[A-Z]{3}-\d{3}\b/i.test(id)) {
               signatures.push({ id, group, info });
@@ -231,7 +258,6 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
           let group = '-';
           let info = '-';
 
-          // Check if group is on the same line or next line
           for (const g of KNOWN_GROUPS) {
             if (line.toUpperCase().includes(g)) {
               group = g;
@@ -283,7 +309,6 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
         headerTextSample: headerTextSample.substring(0, 80),
         tableHeadersSample: allTableHeadersSample.slice(0, 3),
         strategyUsed,
-        candidateContainersCount: candidateContainers.length,
         rowsScanned: signatures.length
       }
     };
@@ -306,19 +331,16 @@ export function extractWandererSignatures(doc = (typeof document !== 'undefined'
  * Helper for running in Node.js test environments without native browser DOM.
  */
 export function extractWandererSignaturesFromHtml(htmlString) {
-  const cleanText = htmlString.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const headerMatch = cleanText.match(/(?:\[\d+\]\s*)?Signatures\s+in\s+([A-Z0-9]+)\s+([A-Z0-9\-]+)/i);
+  const spacedHtml = htmlString.replace(/<\/?[^>]+(>|$)/g, ' ');
+  const cleanText = spacedHtml.replace(/\s+/g, ' ').trim();
+
   let systemClass = 'Unknown';
   let system = 'Unknown';
 
-  if (headerMatch) {
-    if (/^C\d{1,2}$/i.test(headerMatch[1]) || /^(Highsec|Lowsec|Nullsec|Pochven)$/i.test(headerMatch[1])) {
-      systemClass = headerMatch[1].toUpperCase();
-      system = headerMatch[2];
-    } else {
-      system = headerMatch[1];
-      systemClass = headerMatch[2].toUpperCase();
-    }
+  const directMatch = cleanText.match(/(?:Signatures\s*)?in\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})/i);
+  if (directMatch) {
+    systemClass = directMatch[1].toUpperCase();
+    system = directMatch[2].toUpperCase();
   }
 
   const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
@@ -326,9 +348,14 @@ export function extractWandererSignaturesFromHtml(htmlString) {
   let m;
 
   while ((m = rowRegex.exec(htmlString)) !== null) {
-    const cleanCol0 = m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const cleanCol1 = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const cleanCol2 = m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanCol0 = m[1].replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanCol1 = m[2].replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
+    let cleanCol2 = m[3].replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const whGlued = cleanCol2.match(/^([A-Z])\s*([A-Z0-9]{4})\s*(C[1-6]|Highsec|Lowsec|Nullsec|Pochven|HS|LS|NS)\s*(J\d{6}|[0-9A-Z]{1,4}-[0-9A-Z]{1,4})$/i);
+    if (whGlued) {
+      cleanCol2 = `${whGlued[1].toUpperCase()} ${whGlued[2].toUpperCase()} ${whGlued[3].toUpperCase()} ${whGlued[4].toUpperCase()}`;
+    }
 
     const idMatch = cleanCol0.match(/([A-Z]{3}-\d{3})/i);
     if (idMatch) {

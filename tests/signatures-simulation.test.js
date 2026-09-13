@@ -156,3 +156,55 @@ if (!md.includes('### J215758 (C4)') || !md.includes('| BSG-714 | Wormhole | A C
 }
 
 console.log('✅ ALL Wanderer Signatures Screenshot Simulation Validations PASSED completely!');
+
+// --- TEST 2: Unspaced child spans reproducing user's report ---
+console.log('--- RUNNING TEST 2: UNSPACED CHILD SPANS (USER REPORTED ISSUE) ---');
+
+const unspacedHtml = `
+<div class="panel">
+  <div class="header"><span>Signatures </span><span>in</span><span>C4</span><span>J215758</span><span>Lazy</span><span>delete</span></div>
+  <table>
+    <thead><tr><th>Id</th><th>Group</th><th>Info</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span>BSG-714</span></td>
+        <td><span>Wormhole</span></td>
+        <td><span>A</span><span>C247</span><span>C3</span><span>J172701</span></td>
+      </tr>
+      <tr>
+        <td><span>RIS-443</span></td>
+        <td><span>Wormhole</span></td>
+        <td><span>D</span><span>X877</span><span>C4</span><span>J120409</span></td>
+      </tr>
+      <tr>
+        <td><span>SVG-364</span></td>
+        <td><span>Combat Site</span></td>
+        <td><span>Frontier Command Post</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+`;
+
+const unspacedExtracted = extractWandererSignaturesFromHtml(unspacedHtml);
+if (unspacedExtracted.system !== 'J215758') {
+  throw new Error(`Expected system J215758, got ${unspacedExtracted.system}`);
+}
+if (unspacedExtracted.class !== 'C4') {
+  throw new Error(`Expected class C4, got ${unspacedExtracted.class}`);
+}
+if (unspacedExtracted.signatures[0].info !== 'A C247 C3 J172701') {
+  throw new Error(`Expected "A C247 C3 J172701", got "${unspacedExtracted.signatures[0].info}"`);
+}
+if (unspacedExtracted.signatures[1].info !== 'D X877 C4 J120409') {
+  throw new Error(`Expected "D X877 C4 J120409", got "${unspacedExtracted.signatures[1].info}"`);
+}
+
+const unspacedTsv = formatSignaturesData(unspacedExtracted, 'tsv');
+console.log('Unspaced TSV Output:\n' + unspacedTsv);
+
+if (!unspacedTsv.startsWith('J215758 (C4)\n')) {
+  throw new Error(`First line must be "J215758 (C4)", got "${unspacedTsv.split('\n')[0]}"`);
+}
+
+console.log('✅ Unspaced child span test PASSED completely!');
