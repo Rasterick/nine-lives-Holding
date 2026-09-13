@@ -176,6 +176,7 @@
     <div class="test-actions">
       <button id="btnRunTest" class="btn-test">⚡ TEST SVG EXTRACTION</button>
       <button id="btnToggleFormat" class="btn-test">📋 SHOW TSV DUMP</button>
+      <button id="btnTestSigs" class="btn-test" style="border-color: #f59e0b; color: #f59e0b;">🎯 TEST SIGS (J215758)</button>
     </div>
   </header>
 
@@ -260,6 +261,92 @@
           <text x="44" y="44" class="tags-text">Sisters of EVE</text>
         </g>
       </svg>
+
+      <!-- Wanderer Active System Signatures Overlay Panel (Matches User Screenshot) -->
+      <div class="signatures-panel wanderer-overlay-widget" style="position: absolute; bottom: 16px; right: 16px; width: 660px; background: rgba(10, 16, 26, 0.96); border: 1px solid #1e3a5f; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.85); font-family: 'JetBrains Mono', monospace; z-index: 100; overflow: hidden;">
+        <div class="panel-header" style="background: #0d1a2d; padding: 7px 12px; border-bottom: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+          <div>
+            <span style="color: #64748b; font-weight: 700;">[6]</span>
+            <span style="color: #cbd5e1; font-weight: 600; margin-left: 4px;">Signatures in</span>
+            <span style="color: #eab308; font-weight: 700; margin-left: 4px;">C4</span>
+            <span style="color: #ffffff; font-weight: 700; margin-left: 4px;">J215758</span>
+          </div>
+          <div style="font-size: 10px; color: #94a3b8; display: flex; gap: 10px; align-items: center;">
+            <label style="cursor: pointer;"><input type="checkbox" checked style="vertical-align: middle;"> Lazy delete</label>
+            <span style="cursor: pointer;" title="Help">❓</span>
+            <span style="cursor: pointer;" title="Columns & Filter">⚙</span>
+          </div>
+        </div>
+        <table class="signatures-table" style="width: 100%; border-collapse: collapse; font-size: 9.5px; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid #1e293b; color: #94a3b8; background: rgba(15, 23, 42, 0.6);">
+              <th style="padding: 5px 10px;">Id <span>↑=</span></th>
+              <th style="padding: 5px 10px;">Group <span>↑↓</span></th>
+              <th style="padding: 5px 10px;">Info <span>↑↓</span></th>
+              <th style="padding: 5px 10px;">Description <span>↑↓</span></th>
+              <th style="padding: 5px 10px;">Added <span>↑↓</span></th>
+              <th style="padding: 5px 10px;">Updated <span>↑↓</span></th>
+              <th style="padding: 5px 10px;">Character</th>
+            </tr>
+          </thead>
+          <tbody style="color: #cbd5e1;">
+            <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.4);">
+              <td style="padding: 5px 10px; color: #38bdf8;">✦ BSG-714</td>
+              <td style="padding: 5px 10px; color: #38bdf8;">Wormhole</td>
+              <td style="padding: 5px 10px;">A C247 <span style="background: rgba(245, 158, 11, 0.25); color: #f59e0b; padding: 1px 4px; border-radius: 3px; font-weight: 700;">C3</span> J172701</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 10:23:53</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Dentin</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.4);">
+              <td style="padding: 5px 10px; color: #38bdf8;">✦ RIS-443</td>
+              <td style="padding: 5px 10px; color: #38bdf8;">Wormhole</td>
+              <td style="padding: 5px 10px;">D X877 <span style="background: rgba(234, 179, 8, 0.25); color: #eab308; padding: 1px 4px; border-radius: 3px; font-weight: 700;">C4</span> J120409</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 06:49:33</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Didier</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.4);">
+              <td style="padding: 5px 10px; color: #38bdf8;">✦ SHX-448</td>
+              <td style="padding: 5px 10px; color: #38bdf8;">Wormhole</td>
+              <td style="padding: 5px 10px;">E U574 <span style="background: rgba(234, 88, 12, 0.25); color: #ea580c; padding: 1px 4px; border-radius: 3px; font-weight: 700;">C6</span> J120512</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 06:18:31</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Daedru</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.4);">
+              <td style="padding: 5px 10px; color: #84cc16;">⬖ SVG-364</td>
+              <td style="padding: 5px 10px; color: #84cc16;">Combat Site</td>
+              <td style="padding: 5px 10px; color: #84cc16;">Frontier Command Post</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 06:49:33</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Didier</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.4);">
+              <td style="padding: 5px 10px; color: #a3e635;">ஃ ZCD-829</td>
+              <td style="padding: 5px 10px; color: #a3e635;">Ore Site</td>
+              <td style="padding: 5px 10px;">Average Frontier Deposit</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 16:01:28</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Vox For</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 10px; color: #38bdf8;">✦ ZCG-448</td>
+              <td style="padding: 5px 10px; color: #38bdf8;">Wormhole</td>
+              <td style="padding: 5px 10px;">B H900 <span style="background: rgba(217, 70, 239, 0.25); color: #d946ef; padding: 1px 4px; border-radius: 3px; font-weight: 700;">C5</span> J141204</td>
+              <td style="padding: 5px 10px;"></td>
+              <td style="padding: 5px 10px; color: #64748b;">0 06:46:56</td>
+              <td style="padding: 5px 10px; color: #64748b;">0 01:15:10</td>
+              <td style="padding: 5px 10px; color: #94a3b8;">Didier</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
