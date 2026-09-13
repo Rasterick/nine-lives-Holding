@@ -40,8 +40,8 @@ if (btnTestSigs) {
 
 const btnTestPilots = document.getElementById('btnTestPilots');
 if (btnTestPilots) {
-  btnTestPilots.addEventListener('click', () => {
-    const data = extractWandererPilots();
+  btnTestPilots.addEventListener('click', async () => {
+    const data = await extractWandererPilots();
     const tsv = formatPilotsData(data, 'tsv');
     debugPanel.style.display = 'block';
     debugOutput.textContent = tsv;
@@ -78,8 +78,8 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
       const data = extractWandererSignatures();
       sendResponse(data);
     } else if (request.action === 'EXTRACT_WANDERER_PILOTS') {
-      const data = extractWandererPilots();
-      sendResponse(data);
+      extractWandererPilots().then(data => sendResponse(data));
+      return true;
     }
     return true;
   });

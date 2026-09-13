@@ -5,7 +5,7 @@
  * Designed for execution inside browser tabs via chrome.scripting.executeScript.
  * Contains ALL helper functions internally to guarantee zero ReferenceErrors.
  */
-export function extractWandererPilots(doc = (typeof document !== 'undefined' ? document : null)) {
+export async function extractWandererPilots(doc = (typeof document !== 'undefined' ? document : null)) {
   if (!doc) {
     return { success: false, error: 'NO_DOCUMENT_AVAILABLE', pilots: [] };
   }
@@ -199,8 +199,9 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       }
     }
 
-    // Check Wanderer's "Ship name" toggle state in localCard header
+    // Check Wanderer's "Ship name" toggle state in localCard header & auto-enable if unchecked
     let shipNamesToggled = null;
+    let autoCheckedShipNames = false;
     try {
       if (localCard) {
         const toggleCandidates = Array.from(localCard.querySelectorAll?.('*') || []);
@@ -211,16 +212,37 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
             const chk = parent?.querySelector?.('input[type="checkbox"]') || el.querySelector?.('input[type="checkbox"]');
             if (chk) {
               shipNamesToggled = Boolean(chk.checked);
+              if (!chk.checked && typeof chk.click === 'function') {
+                try {
+                  chk.click();
+                  autoCheckedShipNames = true;
+                  shipNamesToggled = true;
+                } catch {}
+              }
             } else {
               const btn = parent?.querySelector?.('[role="checkbox"]') || el.querySelector?.('[role="checkbox"]');
               if (btn) {
                 shipNamesToggled = btn.getAttribute?.('aria-checked') === 'true';
+                if (!shipNamesToggled && typeof btn.click === 'function') {
+                  try {
+                    btn.click();
+                    autoCheckedShipNames = true;
+                    shipNamesToggled = true;
+                  } catch {}
+                }
               } else {
                 const html = (parent ? parent.innerHTML : el.innerHTML) || '';
-                if (/checked|active|text-blue|bg-blue|lucide-check|check-square/i.test(html)) {
-                  shipNamesToggled = true;
-                } else if (/unchecked|inactive|border-gray/i.test(html)) {
-                  shipNamesToggled = false;
+                const isChecked = /checked|active|text-blue|bg-blue|lucide-check|check-square/i.test(html);
+                shipNamesToggled = isChecked;
+                if (!isChecked) {
+                  const clickable = el.nextElementSibling || parent?.querySelector?.('button, [class*="toggle"], [class*="checkbox"]');
+                  if (clickable && typeof clickable.click === 'function') {
+                    try {
+                      clickable.click();
+                      autoCheckedShipNames = true;
+                      shipNamesToggled = true;
+                    } catch {}
+                  }
                 }
               }
             }
@@ -229,6 +251,10 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
         }
       }
     } catch {}
+
+    if (autoCheckedShipNames) {
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
 
     // Helper: Recursively search React fiber or props object for ship name
     function searchReactObjectForShipName(obj, depth = 0) {
@@ -691,6 +717,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       class: detectedClass,
       count: pilots.length,
       shipNamesToggled,
+      autoCheckedShipNames,
       pilots,
       message: pilots.length > 0
         ? `Successfully extracted ${pilots.length} pilots from Local roster.`

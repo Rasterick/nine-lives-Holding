@@ -198,7 +198,7 @@ if (clearResult.system !== 'J215758' || clearResult.class !== 'C4') {
 }
 
 // 3. Test null doc handling in extractWandererPilots
-const nullDocResult = extractWandererPilots(null);
+const nullDocResult = await extractWandererPilots(null);
 if (nullDocResult.success || nullDocResult.error !== 'NO_DOCUMENT_AVAILABLE') {
   throw new Error('Expected NO_DOCUMENT_AVAILABLE on null doc');
 }
@@ -277,7 +277,7 @@ const mockDoc = {
   }
 };
 
-const domResult = extractWandererPilots(mockDoc);
+const domResult = await extractWandererPilots(mockDoc);
 if (!domResult.success || domResult.pilots.length !== 3) {
   throw new Error(`DOM Walker Extraction failed: ${JSON.stringify(domResult)}`);
 }
@@ -332,7 +332,7 @@ const spacedMockDoc = {
   }
 };
 
-const spacedResult = extractWandererPilots(spacedMockDoc);
+const spacedResult = await extractWandererPilots(spacedMockDoc);
 if (!spacedResult.success || spacedResult.pilots.length !== 2) {
   throw new Error(`Spaced corp extraction failed: ${JSON.stringify(spacedResult)}`);
 }
@@ -436,7 +436,7 @@ const liveMockDoc = {
   }
 };
 
-const liveResult = extractWandererPilots(liveMockDoc);
+const liveResult = await extractWandererPilots(liveMockDoc);
 if (!liveResult.success || liveResult.pilots.length !== 3) {
   throw new Error(`Live mock extraction failed: ${JSON.stringify(liveResult)}`);
 }
@@ -518,7 +518,7 @@ const sixPilotsDoc = {
   }
 };
 
-const sixResult = extractWandererPilots(sixPilotsDoc);
+const sixResult = await extractWandererPilots(sixPilotsDoc);
 if (!sixResult.success || sixResult.pilots.length !== 6) {
   throw new Error(`Six pilots extraction failed: ${JSON.stringify(sixResult)}`);
 }
@@ -601,7 +601,7 @@ const sevenPilotsCheckedDoc = {
   }
 };
 
-const sevenResult = extractWandererPilots(sevenPilotsCheckedDoc);
+const sevenResult = await extractWandererPilots(sevenPilotsCheckedDoc);
 if (!sevenResult.success || sevenResult.pilots.length !== 7) {
   throw new Error(`Seven pilots extraction failed: ${JSON.stringify(sevenResult)}`);
 }
@@ -683,18 +683,73 @@ const uncheckedWithReactDoc = {
   querySelector() { return null; }
 };
 
-const reactResult = extractWandererPilots(uncheckedWithReactDoc);
+const reactResult = await extractWandererPilots(uncheckedWithReactDoc);
 if (!reactResult.success || reactResult.pilots.length !== 1) {
   throw new Error(`React memory test failed: ${JSON.stringify(reactResult)}`);
 }
 if (reactResult.pilots[0].shipType !== 'Stratios' || reactResult.pilots[0].shipName !== '☜☠☞ Palliser') {
   throw new Error(`React memory extraction mismatch: expected Stratios / ☜☠☞ Palliser, got ${JSON.stringify(reactResult.pilots[0])}`);
 }
-if (reactResult.shipNamesToggled !== false) {
-  throw new Error(`Expected shipNamesToggled === false, got ${reactResult.shipNamesToggled}`);
+
+// Test case 7: Auto-check simulation when "Ship name" is unchecked
+let checkboxClicked = false;
+const autoCheckMockDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {
+    querySelectorAll(q) {
+      if (q === '*') {
+        const mockCheckbox = {
+          checked: false,
+          click() {
+            this.checked = true;
+            checkboxClicked = true;
+          }
+        };
+        const localCard = {
+          tagName: 'DIV',
+          className: 'panel local-panel',
+          parentElement: null,
+          querySelectorAll(innerQ) {
+            if (innerQ === '*') {
+              return [
+                {
+                  tagName: 'LABEL',
+                  textContent: 'Ship name',
+                  parentElement: {
+                    querySelector(sel) {
+                      if (sel.includes('checkbox')) return mockCheckbox;
+                      return null;
+                    }
+                  }
+                },
+                reactRow
+              ];
+            }
+            return [];
+          }
+        };
+        return [
+          { textContent: 'Local [1]', parentElement: localCard }
+        ];
+      }
+      return [];
+    }
+  },
+  querySelectorAll(q) {
+    return this.body.querySelectorAll(q);
+  },
+  querySelector() { return null; }
+};
+
+const autoCheckResult = await extractWandererPilots(autoCheckMockDoc);
+if (!autoCheckResult.success || autoCheckResult.pilots.length !== 1) {
+  throw new Error(`Auto-check test failed: ${JSON.stringify(autoCheckResult)}`);
+}
+if (!checkboxClicked || !autoCheckResult.autoCheckedShipNames) {
+  throw new Error(`Expected checkboxClicked && autoCheckedShipNames to be true, got clicked=${checkboxClicked}, autoChecked=${autoCheckResult.autoCheckedShipNames}`);
 }
 
-console.log('✅ Local Pilots Extractor tests passed (including checked & unchecked ship names & React memory)!');
+console.log('✅ Local Pilots Extractor tests passed (including checked & unchecked ship names, React memory & auto-enabling)!');
 
 
 

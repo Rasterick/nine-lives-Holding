@@ -438,7 +438,7 @@ async function handleIngestWandererPilots() {
       try {
         extraction = await chrome.tabs.sendMessage(currentTab.id, { action: 'EXTRACT_WANDERER_PILOTS' });
       } catch (e) {
-        extraction = extractWandererPilots();
+        extraction = await extractWandererPilots();
       }
     } else {
       const execResults = await chrome.scripting.executeScript({
@@ -493,8 +493,16 @@ async function handleIngestWandererPilots() {
       latencyValue.textContent = `${elapsed}ms`;
     }
 
-    const hasUncheckedWarning = extraction.shipNamesToggled === false ||
-      (extraction.pilots.length > 0 && extraction.pilots.every(p => p.shipName && p.shipType && p.shipName.toLowerCase() === p.shipType.toLowerCase() && p.shipType !== 'Capsule'));
+    const hasUncheckedWarning = !extraction.autoCheckedShipNames && (
+      extraction.shipNamesToggled === false ||
+      (extraction.pilots.length > 0 && extraction.pilots.every(p => p.shipName && p.shipType && p.shipName.toLowerCase() === p.shipType.toLowerCase() && p.shipType !== 'Capsule'))
+    );
+
+    const autoCheckedNotice = extraction.autoCheckedShipNames ? `
+      <div style="margin-top: 4px; padding: 3px 6px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); border-radius: 4px; font-size: 8px; color: #34d399; line-height: 1.3;">
+        ⚡ <strong>Auto-Checked:</strong> Enabled <em>"Ship name" [✓]</em> in Wanderer to capture full ship names &amp; custom tags.
+      </div>
+    ` : '';
 
     const shipNameNotice = hasUncheckedWarning ? `
       <div style="margin-top: 4px; padding: 4px 6px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 4px; font-size: 8px; color: #fbbf24; line-height: 1.3;">
@@ -507,6 +515,7 @@ async function handleIngestWandererPilots() {
         <span>[✓] ${extraction.count === 0 ? 'LOCAL CLEAR (0 PILOTS)' : `${extraction.pilots.length} PILOTS INGESTED`}</span>
         <span style="font-size: 8px; background: rgba(16,185,129,0.2); color: #10b981; padding: 1px 4px; border-radius: 3px;">${extraction.system} (${extraction.class})</span>
       </div>
+      ${autoCheckedNotice}
       ${shipNameNotice}
       <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${formattedData}</pre>
     `;
@@ -531,6 +540,31 @@ if (btnSignatures) {
 }
 if (btnPilots) {
   btnPilots.addEventListener('click', handleIngestWandererPilots);
+
+  btnPilots.addEventListener('mouseenter', () => {
+    if (!lastIngestType && outputBox) {
+      outputBox.innerHTML = `
+        <div style="color: #10b981; font-weight: 700;">
+          ◈ TACTICAL SCANNER: LOCAL PILOTS [LOCAL]
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px; line-height: 1.4;">
+          Scrapes pilot identities, corp tickers, ship types &amp; custom fleet tags.<br>
+          <span style="color: #38bdf8;">💡 <strong>Pro-Tip:</strong> Ensure <em>"Ship name" [✓]</em> is checked in Wanderer for custom tags (e.g. ☜☠☞ Palliser). The extension will also attempt to auto-check it if needed.</span>
+        </div>
+      `;
+    }
+  });
+
+  btnPilots.addEventListener('mouseleave', () => {
+    if (!lastIngestType && outputBox) {
+      outputBox.innerHTML = `
+        <div style="color: #64748b; font-size: 8.5px; line-height: 1.4;">
+          &gt; AURA TACTICAL EXTENSION INITIALIZED<br>
+          &gt; SELECT AN ACTION ABOVE TO INGEST WANDERER CHAIN OR PILOTS
+        </div>
+      `;
+    }
+  });
 }
 
 btnCopyAgain.addEventListener('click', async () => {
