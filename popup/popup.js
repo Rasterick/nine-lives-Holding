@@ -493,11 +493,21 @@ async function handleIngestWandererPilots() {
       latencyValue.textContent = `${elapsed}ms`;
     }
 
+    const hasUncheckedWarning = extraction.shipNamesToggled === false ||
+      (extraction.pilots.length > 0 && extraction.pilots.every(p => p.shipName && p.shipType && p.shipName.toLowerCase() === p.shipType.toLowerCase() && p.shipType !== 'Capsule'));
+
+    const shipNameNotice = hasUncheckedWarning ? `
+      <div style="margin-top: 4px; padding: 4px 6px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 4px; font-size: 8px; color: #fbbf24; line-height: 1.3;">
+        ⚠️ <strong>Ship name is unchecked in Wanderer:</strong> Keep <em>"Ship name" [✓]</em> checked in Wanderer's Local header to capture custom fleet ship tags (e.g. ☜☠☞ Palliser).
+      </div>
+    ` : '';
+
     outputBox.innerHTML = `
       <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
         <span>[✓] ${extraction.count === 0 ? 'LOCAL CLEAR (0 PILOTS)' : `${extraction.pilots.length} PILOTS INGESTED`}</span>
         <span style="font-size: 8px; background: rgba(16,185,129,0.2); color: #10b981; padding: 1px 4px; border-radius: 3px;">${extraction.system} (${extraction.class})</span>
       </div>
+      ${shipNameNotice}
       <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${formattedData}</pre>
     `;
 

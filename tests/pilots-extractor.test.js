@@ -624,6 +624,77 @@ for (let i = 0; i < expectedSeven.length; i++) {
   }
 }
 
-console.log('✅ Local Pilots Extractor tests passed (including checked & unchecked ship names)!');
+// Test case 6: Unchecked Wanderer DOM text (says Stratios), but React fiber/props contains the custom tag
+const reactRow = {
+  tagName: 'DIV',
+  className: 'pilot-row',
+  textContent: 'Abon Riff [ AP.MC ] Stratios',
+  __reactProps$abc123: {
+    pilot: {
+      name: 'Abon Riff',
+      corporation: 'AP.MC',
+      ship: {
+        type_id: 33470,
+        type_name: 'Stratios',
+        name: '☜☠☞ Palliser'
+      }
+    }
+  },
+  querySelectorAll(q) {
+    if (q === 'img') {
+      return [
+        { tagName: 'IMG', getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/characters/92029163/portrait' : null },
+        { tagName: 'IMG', getAttribute: (a) => a === 'src' ? 'https://images.evetech.net/types/33470/icon' : null, closest: () => null }
+      ];
+    }
+    return [];
+  }
+};
+
+const uncheckedWithReactDoc = {
+  title: 'Wanderer - J215758 (C4)',
+  body: {
+    querySelectorAll(q) {
+      if (q === '*') {
+        const localCard = {
+          tagName: 'DIV',
+          className: 'panel local-panel',
+          parentElement: null,
+          querySelectorAll(innerQ) {
+            if (innerQ === '*') {
+              return [
+                { tagName: 'SPAN', textContent: 'Ship name', parentElement: { querySelector: () => ({ checked: false }) } },
+                reactRow
+              ];
+            }
+            return [];
+          }
+        };
+        return [
+          { textContent: 'Local [1]', parentElement: localCard }
+        ];
+      }
+      return [];
+    }
+  },
+  querySelectorAll(q) {
+    return this.body.querySelectorAll(q);
+  },
+  querySelector() { return null; }
+};
+
+const reactResult = extractWandererPilots(uncheckedWithReactDoc);
+if (!reactResult.success || reactResult.pilots.length !== 1) {
+  throw new Error(`React memory test failed: ${JSON.stringify(reactResult)}`);
+}
+if (reactResult.pilots[0].shipType !== 'Stratios' || reactResult.pilots[0].shipName !== '☜☠☞ Palliser') {
+  throw new Error(`React memory extraction mismatch: expected Stratios / ☜☠☞ Palliser, got ${JSON.stringify(reactResult.pilots[0])}`);
+}
+if (reactResult.shipNamesToggled !== false) {
+  throw new Error(`Expected shipNamesToggled === false, got ${reactResult.shipNamesToggled}`);
+}
+
+console.log('✅ Local Pilots Extractor tests passed (including checked & unchecked ship names & React memory)!');
+
 
 

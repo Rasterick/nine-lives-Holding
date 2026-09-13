@@ -199,6 +199,88 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       }
     }
 
+    // Check Wanderer's "Ship name" toggle state in localCard header
+    let shipNamesToggled = null;
+    try {
+      if (localCard) {
+        const toggleCandidates = Array.from(localCard.querySelectorAll?.('*') || []);
+        for (const el of toggleCandidates) {
+          const txt = (el.textContent || '').trim();
+          if (/^Ship\s*names?$/i.test(txt)) {
+            const parent = el.parentElement;
+            const chk = parent?.querySelector?.('input[type="checkbox"]') || el.querySelector?.('input[type="checkbox"]');
+            if (chk) {
+              shipNamesToggled = Boolean(chk.checked);
+            } else {
+              const btn = parent?.querySelector?.('[role="checkbox"]') || el.querySelector?.('[role="checkbox"]');
+              if (btn) {
+                shipNamesToggled = btn.getAttribute?.('aria-checked') === 'true';
+              } else {
+                const html = (parent ? parent.innerHTML : el.innerHTML) || '';
+                if (/checked|active|text-blue|bg-blue|lucide-check|check-square/i.test(html)) {
+                  shipNamesToggled = true;
+                } else if (/unchecked|inactive|border-gray/i.test(html)) {
+                  shipNamesToggled = false;
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+    } catch {}
+
+    // Helper: Recursively search React fiber or props object for ship name
+    function searchReactObjectForShipName(obj, depth = 0) {
+      if (!obj || depth > 4 || typeof obj !== 'object') return null;
+      try {
+        const candidates = [
+          obj.pilot?.ship?.name,
+          obj.pilot?.ship_name,
+          obj.pilot?.shipName,
+          obj.character?.ship?.name,
+          obj.character?.ship_name,
+          obj.ship?.name,
+          obj.ship_name,
+          obj.shipName
+        ];
+        for (const c of candidates) {
+          if (typeof c === 'string' && c.trim().length > 0) {
+            return c.trim();
+          }
+        }
+        if (obj.memoizedProps) {
+          const res = searchReactObjectForShipName(obj.memoizedProps, depth + 1);
+          if (res) return res;
+        }
+        if (obj.props) {
+          const res = searchReactObjectForShipName(obj.props, depth + 1);
+          if (res) return res;
+        }
+      } catch {}
+      return null;
+    }
+
+    // Helper: Search DOM elements for React fiber/props containing custom ship names
+    function findCustomShipNameInReact(rowEl, candidateEls) {
+      if (!rowEl) return null;
+      const elements = [rowEl, ...(candidateEls || [])];
+      for (const el of elements) {
+        if (!el) continue;
+        try {
+          const keys = Object.keys(el);
+          for (const k of keys) {
+            if (k.startsWith('__reactProps$') || k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
+              const val = el[k];
+              const name = searchReactObjectForShipName(val, 0);
+              if (name) return name;
+            }
+          }
+        } catch {}
+      }
+      return null;
+    }
+
     // --- PHASE 4: Extract Pilot Entries ---
     const pilots = [];
 
@@ -430,22 +512,31 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       }
 
       // 6. If shipName currently matches shipType (e.g. "Ship name" checkbox was unchecked in Wanderer),
-      // check if the custom ship name is stored in title attributes or data-ship-name attributes
+      // check if the custom ship name is stored in React memory, title attributes, or data attributes
       if (shipName && shipType && shipName.toLowerCase() === shipType.toLowerCase()) {
-        for (const el of allRowCandidateEls) {
-          if (el === pImg) continue;
-          const t = el.getAttribute?.('title') ||
-                    el.getAttribute?.('data-ship-name') ||
-                    el.getAttribute?.('data-tag') ||
-                    el.getAttribute?.('data-name') || '';
-          if (!t) continue;
-          const cleaned = clean(t);
-          if (cleaned && cleaned.toLowerCase() !== shipType.toLowerCase() &&
-              cleaned.toLowerCase() !== pilotName.toLowerCase() &&
-              cleaned.toLowerCase() !== corpTicker.toLowerCase() &&
-              !/^(portrait|avatar|close|edit|delete|dock|undock|docked|undocked|station|structure|ship\s*name)$/i.test(cleaned)) {
-            shipName = cleaned;
-            break;
+        try {
+          const reactCustomName = findCustomShipNameInReact(rowEl, allRowCandidateEls);
+          if (reactCustomName && reactCustomName.toLowerCase() !== shipType.toLowerCase()) {
+            shipName = reactCustomName;
+          }
+        } catch {}
+
+        if (shipName.toLowerCase() === shipType.toLowerCase()) {
+          for (const el of allRowCandidateEls) {
+            if (el === pImg) continue;
+            const t = el.getAttribute?.('title') ||
+                      el.getAttribute?.('data-ship-name') ||
+                      el.getAttribute?.('data-tag') ||
+                      el.getAttribute?.('data-name') || '';
+            if (!t) continue;
+            const cleaned = clean(t);
+            if (cleaned && cleaned.toLowerCase() !== shipType.toLowerCase() &&
+                cleaned.toLowerCase() !== pilotName.toLowerCase() &&
+                cleaned.toLowerCase() !== corpTicker.toLowerCase() &&
+                !/^(portrait|avatar|close|edit|delete|dock|undock|docked|undocked|station|structure|ship\s*name)$/i.test(cleaned)) {
+              shipName = cleaned;
+              break;
+            }
           }
         }
       }
@@ -599,6 +690,7 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       system: detectedSystem,
       class: detectedClass,
       count: pilots.length,
+      shipNamesToggled,
       pilots,
       message: pilots.length > 0
         ? `Successfully extracted ${pilots.length} pilots from Local roster.`
