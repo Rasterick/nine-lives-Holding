@@ -451,7 +451,18 @@ async function handleIngestWandererPilots() {
     }
 
     if (!extraction || !extraction.success || !extraction.pilots?.length) {
-      const isClear = extraction?.count === 0 || extraction?.pilots?.length === 0;
+      const isClear = extraction?.count === 0;
+      const dbg = extraction?.debug;
+      const dbgDetails = dbg ? `
+        <div style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.6); border: 1px solid #1e3a5f; border-radius: 4px; font-size: 8px; color: #94a3b8; line-height: 1.4;">
+          <div style="color: #00e5ff; font-weight: 700; margin-bottom: 2px;">TACTICAL DIAGNOSTIC:</div>
+          • Header: <span style="color:#fff;">${dbg.headerText || 'None'}</span> | Count: <span style="color:#00e5ff;">${dbg.localCount !== null ? dbg.localCount : 'Unknown'}</span><br>
+          • Portraits Found: <span style="color:#00e5ff;">${dbg.portraitsFound || 0}</span> | Pilots Scanned: <span style="color:#00e5ff;">${dbg.pilotsFound || 0}</span><br>
+          • Card Container: <span style="color:#e2e8f0;">&lt;${dbg.localCardTag}&gt; ${dbg.localCardClass ? `.${dbg.localCardClass}` : ''}</span>
+          ${dbg.exception ? `<br>• Error: <span style="color:#ef4444;">${dbg.exception}</span>` : ''}
+        </div>
+      ` : '';
+
       outputBox.innerHTML = `
         <div style="color: #f59e0b; font-weight: 700;">
           ${isClear ? '[!] LOCAL CLEAR // NO PILOTS IN SYSTEM' : '[!] NO LOCAL PILOTS DETECTED'}
@@ -464,6 +475,7 @@ async function handleIngestWandererPilots() {
         <div style="margin-top: 6px; padding: 4px 6px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; font-size: 8px; color: #10b981;">
           ✔ Active System Verified: <span style="font-weight: 700; color: #fff;">${extraction?.system || 'Unknown'} (${extraction?.class || 'Unknown'})</span>
         </div>
+        ${dbgDetails}
       `;
       return;
     }

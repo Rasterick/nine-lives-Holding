@@ -136,85 +136,54 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
     }
 
     // --- PHASE 3: Bound the Local Panel Container ---
-    // Walk up from matchedHeaderEl to find the innermost container housing the pilots
-    // STOP before reaching any ancestor that contains tables or other panels!
-    let localContainer = null;
-    let curr = matchedHeaderEl;
-    for (let i = 0; i < 5 && curr && curr !== doc.body; i++) {
-      const hasPortraits = curr.querySelectorAll?.('img[src*="character"], img[src*="portrait"], [class*="portrait"] img').length >= 1;
-      const hasTable = !!curr.querySelector?.('table');
-      const hasOtherPanels = /Signatures\s*in/i.test(curr.textContent || '') && !/Local\s*\[\s*\d+\s*\]/i.test(curr.textContent || '');
-
-      if (hasPortraits && !hasTable && !hasOtherPanels) {
-        localContainer = curr;
-        break;
-      }
-
-      if (curr.parentElement) {
-        // If parent starts including tables or other panels, stop immediately and use curr
-        if (curr.parentElement.querySelector?.('table') || /Signatures\s*in|Structures/i.test(curr.parentElement.textContent || '')) {
-          localContainer = curr;
-          break;
-        }
-      }
-      curr = curr.parentElement;
+    // Walk up from matchedHeaderEl, stopping before escaping into multi-panel sidebar
+    let localCard = matchedHeaderEl;
+    while (
+      localCard.parentElement &&
+      localCard.parentElement !== doc.body &&
+      !localCard.parentElement.querySelector?.('table') &&
+      !/Signatures\s*in/i.test(localCard.parentElement.textContent || '')
+    ) {
+      localCard = localCard.parentElement;
     }
-    if (!localContainer) localContainer = matchedHeaderEl.parentElement || doc.body;
+
+    // Fallback: If localCard is still just the header itself or has no images, check closest panel/card
+    if (localCard === matchedHeaderEl || localCard.querySelectorAll?.('img')?.length === 0) {
+      const closestPanel = matchedHeaderEl.closest?.('.panel, .card, [class*="panel"], [class*="card"], [class*="widget"]');
+      if (closestPanel && !closestPanel.querySelector?.('table')) {
+        localCard = closestPanel;
+      } else if (matchedHeaderEl.parentElement && !matchedHeaderEl.parentElement.querySelector?.('table')) {
+        localCard = matchedHeaderEl.parentElement;
+      }
+    }
 
     // --- PHASE 4: Extract Pilot Entries ---
     const pilots = [];
 
-    // Locate character portraits strictly associated with Local
-    // Exclude type icons (/types/), bracket icons (/brackets/), and route images
-    let portraitImgs = Array.from(localContainer.querySelectorAll('img')).filter(img => {
-      const src = img.getAttribute('src') || '';
-      if (/\/types\//i.test(src) || /\/brackets\//i.test(src)) return false;
-      return /characters/i.test(src) || /character/i.test(src) ||
-             img.classList?.contains('portrait') ||
-             img.parentElement?.classList?.contains('pilot-portrait') ||
-             img.closest?.('[class*="portrait"]');
-    });
-
-    // Fallback: If no images have 'characters' explicitly in src, check elements with corp ticker
-    if (portraitImgs.length === 0) {
-      const elementsWithCorp = Array.from(localContainer.querySelectorAll('*')).filter(el => {
-        if (el.closest && el.closest('table')) return false;
-        return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(el.textContent || '') && el.querySelector('img');
-      });
-      portraitImgs = elementsWithCorp
-        .map(el => el.querySelector('img'))
-        .filter(img => {
-          if (!img) return false;
-          const src = img.getAttribute('src') || '';
-          return !/\/types\//i.test(src) && !/\/brackets\//i.test(src);
-        });
-    }
-
-    for (const pImg of portraitImgs) {
-      // Find row element wrapping this pilot
-      let rowEl = pImg.parentElement;
-      while (rowEl && rowEl !== localContainer && rowEl !== doc.body) {
-        const t = extractCleanNodeText(rowEl);
-        if (/\[[A-Za-z0-9.\-_]{2,8}\]/.test(t) || t.length > 10) {
-          break;
-        }
-        if (!rowEl.parentElement || rowEl.parentElement === localContainer || rowEl.parentElement === doc.body) {
-          break;
-        }
-        rowEl = rowEl.parentElement;
-      }
-      if (!rowEl) rowEl = pImg.parentElement || localContainer;
-
+    // Helper to evaluate and add a pilot row
+    function processPilotCandidate(rowEl, pImg = null) {
+      if (!rowEl) return;
       // STRICT ISOLATION: Reject any element inside tables or matching other panels
-      if ((rowEl.closest && rowEl.closest('table')) || (rowEl.querySelector && rowEl.querySelector('table'))) continue;
+      if ((rowEl.closest && rowEl.closest('table')) || (rowEl.querySelector && rowEl.querySelector('table'))) return;
       const rowText = extractCleanNodeText(rowEl);
-      if (/BSG-\d{3}|RIS-\d{3}|SVG-\d{3}|ZCD-\d{3}|ZCG-\d{3}/i.test(rowText)) continue;
-      if (/Fortizar|Raitaru|Athanor|Keepstar|Astrahus/i.test(rowText)) continue;
-      if (/\b(?:Korsiki|Wuos|Harerget|Ardallabier|Azer|Lirsautton)\b/i.test(rowText)) continue;
-      if (/Signatures\s*in/i.test(rowText) || /Local\s*\[/i.test(rowText)) continue;
+      if (/BSG-\d{3}|RIS-\d{3}|SVG-\d{3}|ZCD-\d{3}|ZCG-\d{3}/i.test(rowText)) return;
+      if (/Fortizar|Raitaru|Athanor|Keepstar|Astrahus/i.test(rowText)) return;
+      if (/\b(?:Korsiki|Wuos|Harerget|Ardallabier|Azer|Lirsautton)\b/i.test(rowText)) return;
+      if (/Signatures\s*in/i.test(rowText)) return;
 
       // 1. Portrait URL
-      const portraitUrl = pImg.getAttribute('src') || '';
+      let portraitUrl = '';
+      if (pImg) {
+        portraitUrl = pImg.getAttribute('src') || pImg.src || '';
+      } else {
+        const imgEl = rowEl.querySelector('img[src*="character"], img[src*="portrait"], [class*="portrait"] img, img');
+        if (imgEl) {
+          const src = imgEl.getAttribute('src') || imgEl.src || '';
+          if (!/\/types\//i.test(src) && !/\/brackets\//i.test(src)) {
+            portraitUrl = src;
+          }
+        }
+      }
 
       // 2. Pilot Name and Corp Ticker
       let pilotName = '';
@@ -234,8 +203,8 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       }
 
       // Reject non-pilot rows or UI headers
-      if (!pilotName || /^(Fortizar|Raitaru|Athanor|Type|Id|Group|Info|Local|Signatures|Timer|Owner)$/i.test(pilotName)) continue;
-      if (pilotName.length < 2 || pilotName.length > 60) continue;
+      if (!pilotName || /^(Fortizar|Raitaru|Athanor|Type|Id|Group|Info|Local|Signatures|Timer|Owner)$/i.test(pilotName)) return;
+      if (pilotName.length < 2 || pilotName.length > 60) return;
 
       // 3. Ship Name
       let shipName = '';
@@ -295,15 +264,91 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       }
     }
 
+    // Strategy 1: Find character portraits inside localCard
+    let portraitImgs = Array.from(localCard.querySelectorAll('img')).filter(img => {
+      const src = img.getAttribute('src') || '';
+      if (/\/types\//i.test(src) || /\/brackets\//i.test(src)) return false;
+      return /characters/i.test(src) || /character/i.test(src) ||
+             img.classList?.contains('portrait') ||
+             img.parentElement?.classList?.contains('pilot-portrait') ||
+             img.closest?.('[class*="portrait"]');
+    });
+
+    for (const pImg of portraitImgs) {
+      let rowEl = pImg.parentElement;
+      while (rowEl && rowEl !== localCard && rowEl !== doc.body) {
+        const t = extractCleanNodeText(rowEl);
+        if (/\[[A-Za-z0-9.\-_]{2,8}\]/.test(t) || t.length > 10) {
+          break;
+        }
+        if (!rowEl.parentElement || rowEl.parentElement === localCard || rowEl.parentElement === doc.body) {
+          break;
+        }
+        rowEl = rowEl.parentElement;
+      }
+      processPilotCandidate(rowEl || pImg.parentElement || localCard, pImg);
+    }
+
+    // Strategy 2: If no pilots found via portraits, find elements with [CORP] ticker in localCard
+    if (pilots.length === 0) {
+      const allCardEls = Array.from(localCard.querySelectorAll('*'));
+      const corpCandidates = allCardEls.filter(el => {
+        if (el === matchedHeaderEl || el.contains(matchedHeaderEl)) return false;
+        if (el.closest && el.closest('table')) return false;
+        const txt = (el.textContent || '').trim();
+        return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(txt) && txt.length < 150;
+      });
+      // Take innermost matching elements
+      const innermost = corpCandidates.filter(el => !corpCandidates.some(other => other !== el && el.contains(other)));
+      for (const el of innermost) {
+        const rowEl = el.closest('div[class*="row"], div[class*="entry"], li') || el.parentElement || el;
+        processPilotCandidate(rowEl);
+      }
+    }
+
+    // Strategy 3: Page-wide fallback for elements with [CORP] ticker strictly outside tables
+    if (pilots.length === 0) {
+      for (const root of searchRoots) {
+        const allPageEls = Array.from(root.querySelectorAll('*'));
+        const corpPageEls = allPageEls.filter(el => {
+          if (el.closest && el.closest('table')) return false;
+          if (el.querySelector && el.querySelector('table')) return false;
+          const txt = (el.textContent || '').trim();
+          if (/Signatures\s*in|Structures/i.test(txt)) return false;
+          return /\[[A-Za-z0-9.\-_]{2,8}\]/.test(txt) && txt.length < 120;
+        });
+        const innermost = corpPageEls.filter(el => !corpPageEls.some(other => other !== el && el.contains(other)));
+        for (const el of innermost) {
+          const rowEl = el.closest('div[class*="row"], div[class*="entry"], li') || el.parentElement || el;
+          processPilotCandidate(rowEl);
+        }
+        if (pilots.length > 0) break;
+      }
+    }
+
+    const success = pilots.length > 0 || localCount === 0;
+
     return {
-      success: pilots.length > 0,
+      success,
       system: detectedSystem,
       class: detectedClass,
       count: pilots.length,
       pilots,
       message: pilots.length > 0
         ? `Successfully extracted ${pilots.length} pilots from Local roster.`
-        : 'Found Local panel, but could not parse pilot entries.'
+        : (localCount === 0 
+            ? `Local is clear (0 pilots in ${detectedSystem} (${detectedClass})).`
+            : `Detected Local [${localCount !== null ? localCount : '?'}], but no pilot rows could be parsed.`),
+      debug: {
+        url: doc.location?.href || 'unknown',
+        headerFound: !!matchedHeaderEl,
+        headerText: matchedHeaderEl ? matchedHeaderEl.textContent.trim().substring(0, 60) : 'None',
+        localCount,
+        localCardTag: localCard ? localCard.tagName : 'None',
+        localCardClass: localCard ? (localCard.className || '') : '',
+        portraitsFound: portraitImgs.length,
+        pilotsFound: pilots.length
+      }
     };
 
   } catch (err) {
@@ -311,7 +356,10 @@ export function extractWandererPilots(doc = (typeof document !== 'undefined' ? d
       success: false,
       error: 'EXTRACTION_EXCEPTION',
       message: `Extractor error: ${err.message}`,
-      pilots: []
+      pilots: [],
+      debug: {
+        exception: err.stack || err.message
+      }
     };
   }
 }
