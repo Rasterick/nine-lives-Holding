@@ -208,4 +208,108 @@ if (parsedJson.source !== 'zkillboard' || parsedJson.entity.name !== 'Mitch Cald
 
 console.log('✅ Test 4 PASSED: Discord flash and JSON output valid.');
 
-console.log('\n🎉 ALL PHASE 1 EXTRACTOR & CHAIN CORRELATION TESTS PASSED COMPLETELY!\n');
+// --- TEST 5: EVE-KILL KILLMAIL EXTRACTION & FRIENDLY NULLIFIER ---
+console.log('--- TEST 5: EVE-KILL KILLMAIL EXTRACTION & FRIENDLY NULLIFIER ---');
+const eveKillDoc = {
+  title: 'Tengu | Kainoshi | 533.74m ISK - EVE-KILL.com',
+  location: {
+    href: 'https://eve-kill.com/kill/136895544/',
+    pathname: '/kill/136895544/'
+  },
+  querySelector: (sel) => {
+    if (sel.includes('twitter:description') || sel.includes('description') || sel.includes('og:description')) {
+      return {
+        getAttribute: (attr) => attr === 'content'
+          ? 'Kainoshi (Exiliados / From Lost To The Wormhole.) lost a Tengu in J111218 (-1.0, C-R00009) worth 533.74m ISK. 3 attackers, final blow by Dentin Ename.'
+          : null
+      };
+    }
+    return null;
+  },
+  querySelectorAll: (sel) => {
+    if (sel.includes('relative rounded-md overflow-hidden') || sel.includes('relative flex items-center gap-2')) {
+      return [
+        // Attacker 1: Sleeper NPC
+        {
+          className: 'relative rounded-md overflow-hidden',
+          textContent: 'Awakened Preserver Awakened Preserver 98,591 80.5%',
+          closest: () => null,
+          querySelector: (s) => {
+            if (s.includes('text-npc')) return { textContent: 'Awakened Preserver' };
+            if (s.includes('item')) return { getAttribute: () => '/item/30205', textContent: 'Awakened Preserver' };
+            return null;
+          },
+          querySelectorAll: (s) => {
+            if (s.includes('character')) return [];
+            if (s.includes('corporation')) return [];
+            if (s.includes('alliance')) return [];
+            if (s.includes('span')) return [{ textContent: 'Awakened Preserver' }];
+            return [];
+          }
+        },
+        // Attacker 2: Didier Oriol (Nine Lives)
+        {
+          className: 'relative rounded-md overflow-hidden',
+          textContent: 'Didier Oriol Proteus Nine Lives Privateering Company Apex Mercantile 23,685 19.3%',
+          closest: () => null,
+          querySelector: (s) => {
+            if (s.includes('item')) return { getAttribute: () => '/item/29988', textContent: 'Proteus' };
+            return null;
+          },
+          querySelectorAll: (s) => {
+            if (s.includes('character')) return [{ getAttribute: () => '/character/685821067', textContent: 'Didier Oriol' }];
+            if (s.includes('corporation')) return [{ getAttribute: () => '/corporation/98831204', textContent: 'Nine Lives Privateering Company' }];
+            if (s.includes('alliance')) return [{ getAttribute: () => '/alliance/99015113', textContent: 'Apex Mercantile' }];
+            if (s.includes('span')) return [{ textContent: 'Proteus' }];
+            return [];
+          }
+        },
+        // Attacker 3: Dentin Ename (Nine Lives - Final Blow)
+        {
+          className: 'ring-1 ring-amber-500/30 relative rounded-md overflow-hidden',
+          textContent: 'Dentin Ename Cynabal Nine Lives Privateering Company Apex Mercantile 240 0.2%',
+          closest: (s) => (s && s.includes('ring-amber') ? { className: 'ring-amber-500' } : null),
+          querySelector: (s) => {
+            if (s.includes('item')) return { getAttribute: () => '/item/17720', textContent: 'Cynabal' };
+            if (s.includes('ring-amber')) return true;
+            return null;
+          },
+          querySelectorAll: (s) => {
+            if (s.includes('character')) return [{ getAttribute: () => '/character/2119183168', textContent: 'Dentin Ename' }];
+            if (s.includes('corporation')) return [{ getAttribute: () => '/corporation/98831204', textContent: 'Nine Lives Privateering Company' }];
+            if (s.includes('alliance')) return [{ getAttribute: () => '/alliance/99015113', textContent: 'Apex Mercantile' }];
+            if (s.includes('span')) return [{ textContent: 'Cynabal' }];
+            return [];
+          }
+        }
+      ];
+    }
+    return [];
+  }
+};
+
+const eveKillExtracted = await extractZkillData(eveKillDoc);
+console.log('[TEST 5] Eve-Kill Extraction Success:', eveKillExtracted.success);
+if (!eveKillExtracted.success) {
+  console.log('Error details:', eveKillExtracted.error, eveKillExtracted.debug);
+}
+console.log('[TEST 5] Victim:', eveKillExtracted.victim.name, `(${eveKillExtracted.victim.ship})`, `[${eveKillExtracted.victim.corp}]`);
+console.log('[TEST 5] Attackers Count:', eveKillExtracted.attackers.length);
+console.log('[TEST 5] Attackers:', eveKillExtracted.attackers.map(a => `${a.pilotName} (${a.shipName}) [${a.corpName || 'NPC'}] Friendly:${a.isFriendly}`));
+
+if (!eveKillExtracted.success || eveKillExtracted.attackers.length !== 3) {
+  throw new Error(`Eve-Kill extraction failed! Expected 3 attackers, got ${eveKillExtracted.attackers.length}`);
+}
+
+const eveKillThreat = classifyZkillThreatHeuristically(eveKillExtracted);
+console.log('[TEST 5] Friendly Nullifier Threat Index:', eveKillThreat.threatIndex);
+console.log('[TEST 5] Doctrine:', eveKillThreat.doctrine);
+
+if (eveKillThreat.threatIndex !== 1 || !eveKillThreat.isFriendlyVictory) {
+  throw new Error(`Friendly Nullifier failed! Expected threatIndex 1 and isFriendlyVictory true, got: ${JSON.stringify(eveKillThreat)}`);
+}
+
+console.log('✅ Test 5 PASSED: Eve-Kill extraction and Friendly Nullifier verified with 100% precision!');
+
+console.log('\n🎉 ALL EXTRACTOR, EVE-KILL & FRIENDLY NULLIFIER TESTS PASSED COMPLETELY!\n');
+

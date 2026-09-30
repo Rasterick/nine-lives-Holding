@@ -126,16 +126,24 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         allianceId: null,
         ship: '',
         shipId: null,
-        damageTaken: 0
+        damageTaken: 0,
+        isFriendly: false
       };
+
+      let solarSystem = '';
+      let solarSystemId = null;
+      let timestamp = { timeUtc: '', epochMs: 0, timeAgo: '' };
 
       // 1. Extract victim metadata from meta tags, title, and DOM
       const metaDesc = doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content') ||
+                       doc.querySelector('meta[name="description"]')?.getAttribute('content') ||
                        doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
-      const metaMatch = metaDesc.match(/^(.+?)\s*\((.+?)\)\s*lost their\s*(.+?)\s*in\s*([A-Za-z0-9-]+)/i);
+      const metaMatch = metaDesc.match(/^(.+?)\s*\((.+?)\)\s*lost (?:their|a|an)\s*(.+?)\s*in\s*([A-Za-z0-9-]+)/i);
       if (metaMatch) {
         victim.name = clean(metaMatch[1]);
-        victim.corp = clean(metaMatch[2]);
+        const corpParts = clean(metaMatch[2]).split('/').map(s => clean(s));
+        victim.corp = corpParts[0];
+        if (corpParts[1]) victim.alliance = corpParts[1];
         victim.ship = clean(metaMatch[3]);
         if (!solarSystem) solarSystem = clean(metaMatch[4]);
       }
@@ -235,7 +243,17 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       // Find candidate rows for attackers
       let attackerRows = Array.from(doc.querySelectorAll('.killmail-attackers tr, tr.attacker, [class*="attacker"]'));
 
-      // If class-based search found 0 or only 1 row (Eve-Kill or alternate templates), inspect tables
+      // 1. Check Eve-Kill flex containers:
+      if (attackerRows.length <= 1) {
+        const ekRows = Array.from(doc.querySelectorAll('div[class*="relative rounded-md overflow-hidden"], div[class*="relative flex items-center gap-2"]')).filter(el => {
+          return el.querySelector('a[href*="/character/"], a[href*="/item/"], a[href*="/types/"], img[src*="/characters/"], img[src*="/types/"], .text-npc, [class*="text-npc"]');
+        });
+        if (ekRows.length > 0) {
+          attackerRows = ekRows;
+        }
+      }
+
+      // 2. If table search needed, inspect tables
       if (attackerRows.length <= 1) {
         const candidateTables = Array.from(doc.querySelectorAll('table')).filter(tbl => {
           const txt = (tbl.textContent || '').toLowerCase();
@@ -255,8 +273,7 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         }
       }
 
-      // Filter out summary/header rows (e.g. Final Blow / Top Damage boxes)
-      attackerRows = attackerRows.filter(r => !r.closest('.titles') && !r.classList.contains('titles') && !r.querySelector('th'));
+      attackerRows = attackerRows.filter(r => !r.closest?.('.titles') && !r.classList?.contains?.('titles') && !r.querySelector?.('th'));
 
       attackerRows.forEach((row) => {
         // Pilot Name & Character ID
@@ -278,12 +295,12 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
 
         // If NPC attacker (e.g. Awakened Preserver, Sleeper, Diamond NPC)
         if (!pilotName || pilotName.toLowerCase().includes('unknown character')) {
-          const npcLink = row.querySelector('.pilotinfo a[href*="/ship/"], .pilotinfo a, a[href*="/ship/"], a[href*="/item/"]');
-          const npcText = clean(npcLink?.textContent || '');
+          const npcEl = row.querySelector('.text-npc, [class*="text-npc"], .pilotinfo a[href*="/ship/"], .pilotinfo a, a[href*="/ship/"], a[href*="/item/"]');
+          const npcText = clean(npcEl?.textContent || '');
           if (npcText) {
             pilotName = npcText;
           } else {
-            const imgAlt = row.querySelector('img.shipImageRender, img[src*="/types/"]')?.getAttribute('alt');
+            const imgAlt = row.querySelector('img.shipImageRender, img[src*="/types/"], img[src*="/icons/"]')?.getAttribute('alt');
             if (imgAlt) pilotName = clean(imgAlt);
           }
         }
@@ -325,13 +342,13 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         let shipName = '';
         let shipId = null;
 
-        const shipA = row.querySelector('a[href*="/ship/"]');
-        const shipImg = row.querySelector('img.shipImageRender, a[href*="/ship/"] img, img[src*="/types/"]');
+        const shipA = row.querySelector('a[href*="/ship/"], a[href*="/item/"]');
+        const shipImg = row.querySelector('img.shipImageRender, a[href*="/ship/"] img, a[href*="/item/"] img, img[src*="/types/"]');
 
         if (shipA) {
-          const m = shipA.getAttribute('href')?.match(/\/ship\/(\d+)/i);
+          const m = shipA.getAttribute('href')?.match(/\/(?:ship|item)\/(\d+)/i);
           if (m) shipId = parseInt(m[1], 10);
-          if (clean(shipA.textContent).length > 0) {
+          if (clean(shipA.textContent).length > 0 && !clean(shipA.textContent).includes(pilotName)) {
             shipName = clean(shipA.textContent);
           } else {
             const t = shipA.getAttribute('title') || shipA.getAttribute('data-bs-original-title') || shipA.getAttribute('data-original-title');
@@ -343,8 +360,19 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
           const alt = shipImg.getAttribute('alt') || shipImg.getAttribute('title');
           if (alt) shipName = clean(alt);
           if (!shipId) {
-            const m = shipImg.getAttribute('src')?.match(/\/types\/(\d+)/i);
+            const m = shipImg.getAttribute('src')?.match(/\/(?:types|item)\/(\d+)/i);
             if (m) shipId = parseInt(m[1], 10);
+          }
+        }
+
+        // Eve-Kill specific ship text span: <span class="text-gray-400">Proteus</span>
+        if (!shipName || shipName === pilotName) {
+          const eveKillShipSpan = Array.from(row.querySelectorAll('span.text-gray-400, span')).find(s => {
+            const txt = clean(s.textContent);
+            return txt && txt !== '·' && !txt.includes('%') && !txt.includes(pilotName);
+          });
+          if (eveKillShipSpan) {
+            shipName = clean(eveKillShipSpan.textContent);
           }
         }
 
@@ -356,7 +384,7 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         let weaponName = '';
         let weaponId = null;
 
-        const itemA = row.querySelector('a[href*="/item/"], a[href*="/type/"]');
+        const itemA = row.querySelector('a[href*="/item/"]:not([href*="' + shipId + '"]), a[href*="/type/"]:not([href*="' + shipId + '"])');
         if (itemA) {
           const m = itemA.getAttribute('href')?.match(/\/(?:item|type)\/(\d+)/i);
           if (m) weaponId = parseInt(m[1], 10);
@@ -365,17 +393,19 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         }
 
         if (!weaponName) {
-          const weaponImg = row.querySelector('img[src*="/types/"]:not([src*="' + shipId + '"])') ||
-                            row.querySelectorAll('img[src*="/types/"]')[1];
+          const weaponImg = row.querySelector?.('img[src*="/types/"]:not([src*="' + shipId + '"])') ||
+                            (row.querySelectorAll?.('img[src*="/types/"]') || [])[1];
           if (weaponImg) {
-            weaponName = clean(weaponImg.getAttribute('alt') || weaponImg.getAttribute('title') || '');
-            const m = weaponImg.getAttribute('src')?.match(/\/types\/(\d+)/i);
+            weaponName = clean(weaponImg.getAttribute?.('alt') || weaponImg.getAttribute?.('title') || '');
+            const m = weaponImg.getAttribute?.('src')?.match(/\/types\/(\d+)/i);
             if (m) weaponId = parseInt(m[1], 10);
           }
         }
 
-        const isFinalBlow = /final blow/i.test(row.textContent) ||
-                            !!row.querySelector('.fa-crosshairs, .final-blow, .info_final_blow, img[src*="blow"]');
+        const isFinalBlow = /final blow/i.test(row.textContent || '') ||
+                            (typeof row.className === 'string' && row.className.includes('ring-amber-500')) ||
+                            !!row.closest?.('[class*="ring-amber"]') ||
+                            !!row.querySelector?.('.fa-crosshairs, .final-blow, .info_final_blow, [class*="ring-amber"], img[src*="blow"]');
 
         const FRIENDLY_CORPS = [
           'nine lives privateering company',
