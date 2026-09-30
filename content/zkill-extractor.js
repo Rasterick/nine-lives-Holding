@@ -129,101 +129,253 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         damageTaken: 0
       };
 
-      // Extract victim block
-      const victimBlock = doc.querySelector('.victim') || doc.querySelector('[class*="victim"]') || doc.querySelector('table');
-      if (victimBlock) {
-        const vChar = victimBlock.querySelector('a[href*="/character/"]');
-        if (vChar) {
-          victim.name = clean(vChar.textContent);
-          const m = vChar.getAttribute('href')?.match(/\/character\/(\d+)/i);
+      // 1. Extract victim metadata from meta tags, title, and DOM
+      const metaDesc = doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content') ||
+                       doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+      const metaMatch = metaDesc.match(/^(.+?)\s*\((.+?)\)\s*lost their\s*(.+?)\s*in\s*([A-Za-z0-9-]+)/i);
+      if (metaMatch) {
+        victim.name = clean(metaMatch[1]);
+        victim.corp = clean(metaMatch[2]);
+        victim.ship = clean(metaMatch[3]);
+        if (!solarSystem) solarSystem = clean(metaMatch[4]);
+      }
+
+      // Title fallback
+      if ((!victim.name || !victim.ship) && pageTitle.includes('|')) {
+        const titleParts = pageTitle.split('|').map(p => clean(p));
+        if (titleParts.length >= 2) {
+          if (!victim.ship) victim.ship = titleParts[0];
+          if (!victim.name) victim.name = titleParts[1];
+        }
+      }
+
+      // DOM search across tables for victim identifiers & IDs
+      const allTables = Array.from(doc.querySelectorAll('table'));
+      for (const table of allTables) {
+        // Victim character
+        const charLinks = Array.from(table.querySelectorAll('a[href*="/character/"]'));
+        const charText = charLinks.find(a => clean(a.textContent).length > 0);
+        if (charText && !victim.name) {
+          victim.name = clean(charText.textContent);
+          const m = charText.getAttribute('href')?.match(/\/character\/(\d+)/i);
+          if (m) victim.characterId = parseInt(m[1], 10);
+        } else if (charLinks[0] && !victim.characterId) {
+          const m = charLinks[0].getAttribute('href')?.match(/\/character\/(\d+)/i);
           if (m) victim.characterId = parseInt(m[1], 10);
         }
-        const vCorp = victimBlock.querySelector('a[href*="/corporation/"]');
-        if (vCorp) {
-          victim.corp = clean(vCorp.textContent);
-          const m = vCorp.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+
+        // Victim corp
+        const corpLinks = Array.from(table.querySelectorAll('a[href*="/corporation/"]'));
+        const corpText = corpLinks.find(a => clean(a.textContent).length > 0);
+        if (corpText && !victim.corp) {
+          victim.corp = clean(corpText.textContent);
+          const m = corpText.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+          if (m) victim.corpId = parseInt(m[1], 10);
+        } else if (corpLinks[0] && !victim.corpId) {
+          const m = corpLinks[0].getAttribute('href')?.match(/\/corporation\/(\d+)/i);
           if (m) victim.corpId = parseInt(m[1], 10);
         }
-        const vAlliance = victimBlock.querySelector('a[href*="/alliance/"]');
-        if (vAlliance) {
-          victim.alliance = clean(vAlliance.textContent);
-          const m = vAlliance.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
+
+        // Victim alliance
+        const alliLinks = Array.from(table.querySelectorAll('a[href*="/alliance/"]'));
+        const alliText = alliLinks.find(a => clean(a.textContent).length > 0);
+        if (alliText && !victim.alliance) {
+          victim.alliance = clean(alliText.textContent);
+          const m = alliText.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
+          if (m) victim.allianceId = parseInt(m[1], 10);
+        } else if (alliLinks[0] && !victim.allianceId) {
+          const m = alliLinks[0].getAttribute('href')?.match(/\/alliance\/(\d+)/i);
           if (m) victim.allianceId = parseInt(m[1], 10);
         }
-        const vShip = victimBlock.querySelector('a[href*="/ship/"]') || victimBlock.querySelector('img[src*="/types/"]');
-        if (vShip) {
-          victim.ship = clean(vShip.textContent || vShip.getAttribute('alt') || vShip.getAttribute('title'));
-          const m = (vShip.getAttribute('href') || vShip.getAttribute('src'))?.match(/\/(?:ship|types)\/(\d+)/i);
-          if (m) victim.shipId = parseInt(m[1], 10);
+
+        // Victim ship & system from info table
+        const shipCell = Array.from(table.querySelectorAll('td, th')).find(c => /Ship:/i.test(c.textContent));
+        if (shipCell) {
+          const sRow = shipCell.closest('tr') || shipCell.parentElement;
+          const sLink = sRow?.querySelector('a[href*="/ship/"]');
+          if (sLink) {
+            victim.ship = clean(sLink.textContent);
+            const m = sLink.getAttribute('href')?.match(/\/ship\/(\d+)/i);
+            if (m) victim.shipId = parseInt(m[1], 10);
+          }
+        }
+
+        const sysCell = Array.from(table.querySelectorAll('td, th')).find(c => /System:/i.test(c.textContent));
+        if (sysCell) {
+          const sRow = sysCell.closest('tr') || sysCell.parentElement;
+          const sLink = sRow?.querySelector('a[href*="/system/"]');
+          if (sLink && !solarSystem) {
+            solarSystem = clean(sLink.textContent).split('(')[0].trim();
+            const m = sLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
+            if (m) solarSystemId = parseInt(m[1], 10);
+          }
+        }
+
+        if (victim.name && victim.ship && victim.characterId) break;
+      }
+
+      // Extract system & timestamp fallback
+      if (!solarSystem) {
+        const sysLink = doc.querySelector('a[href*="/system/"]');
+        if (sysLink) {
+          solarSystem = clean(sysLink.textContent).split('(')[0].trim();
+          const m = sysLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
+          if (m) solarSystemId = parseInt(m[1], 10);
         }
       }
 
-      // Extract system & timestamp from killmail metadata
-      let solarSystem = '';
-      let solarSystemId = null;
-      let timestamp = { timeUtc: '', epochMs: 0, timeAgo: '' };
-
-      const sysLink = doc.querySelector('a[href*="/system/"]');
-      if (sysLink) {
-        solarSystem = clean(sysLink.textContent);
-        const m = sysLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
-        if (m) solarSystemId = parseInt(m[1], 10);
-      }
-
-      const timeEl = doc.querySelector('[datetime]') || doc.querySelector('[data-timestamp]') || doc.querySelector('.time') || doc.querySelector('.killmail-time');
+      const timeEl = doc.querySelector('.info_kill_dttm') || doc.querySelector('[datetime]') || doc.querySelector('[data-timestamp]') || doc.querySelector('.time') || doc.querySelector('.killmail-time');
       timestamp = parseTimestamp(timeEl);
 
-      // Extract all attackers (Gang Composition)
+      // =======================================================================
+      // 2. Extract all attackers (Gang Composition) - zKillboard & Eve-Kill
+      // =======================================================================
       const attackers = [];
-      const attackerRows = doc.querySelectorAll('.killmail-attackers tr, .attacker, [class*="attacker"]');
+
+      // Find candidate rows for attackers
+      let attackerRows = Array.from(doc.querySelectorAll('.killmail-attackers tr, tr.attacker, [class*="attacker"]'));
+
+      // If class-based search found 0 or only 1 row (Eve-Kill or alternate templates), inspect tables
+      if (attackerRows.length <= 1) {
+        const candidateTables = Array.from(doc.querySelectorAll('table')).filter(tbl => {
+          const txt = (tbl.textContent || '').toLowerCase();
+          return (txt.includes('involved') || txt.includes('damage') || txt.includes('attacker') || tbl.id === 'attackers') &&
+                 !tbl.querySelector('textarea#eft');
+        });
+
+        for (const tbl of candidateTables) {
+          const rows = Array.from(tbl.querySelectorAll('tbody tr, tr')).filter(r => {
+            const hasLinks = r.querySelector('a[href*="/character/"], a[href*="/ship/"], a[href*="/item/"], a[href*="/types/"], img[src*="/types/"], img[src*="/characters/"]');
+            const isHeader = r.querySelector('th') || r.classList.contains('titles');
+            return hasLinks && !isHeader;
+          });
+          if (rows.length > attackerRows.length) {
+            attackerRows = rows;
+          }
+        }
+      }
+
+      // Filter out summary/header rows (e.g. Final Blow / Top Damage boxes)
+      attackerRows = attackerRows.filter(r => !r.closest('.titles') && !r.classList.contains('titles') && !r.querySelector('th'));
 
       attackerRows.forEach((row) => {
-        const charA = row.querySelector('a[href*="/character/"]');
-        if (!charA && !row.querySelector('img[src*="/characters/"]')) return;
-
-        const pilotName = clean(charA ? charA.textContent : (row.querySelector('img[src*="/characters/"]')?.getAttribute('alt') || 'Unknown Pilot'));
+        // Pilot Name & Character ID
+        let pilotName = '';
         let charId = null;
-        const charHref = charA?.getAttribute('href') || row.querySelector('img[src*="/characters/"]')?.getAttribute('src') || '';
-        const mChar = charHref.match(/\/character[s]?\/(\d+)/i);
-        if (mChar) charId = parseInt(mChar[1], 10);
 
+        const charLinks = Array.from(row.querySelectorAll('a[href*="/character/"]'));
+        const charWithText = charLinks.find(a => clean(a.textContent).length > 0);
+        if (charWithText) {
+          pilotName = clean(charWithText.textContent);
+          const m = charWithText.getAttribute('href')?.match(/\/character\/(\d+)/i);
+          if (m) charId = parseInt(m[1], 10);
+        } else if (charLinks[0]) {
+          const m = charLinks[0].getAttribute('href')?.match(/\/character\/(\d+)/i);
+          if (m) charId = parseInt(m[1], 10);
+          const t = charLinks[0].getAttribute('title') || charLinks[0].getAttribute('data-bs-original-title') || charLinks[0].getAttribute('data-original-title');
+          if (t) pilotName = clean(t);
+        }
+
+        // If NPC attacker (e.g. Awakened Preserver, Sleeper, Diamond NPC)
+        if (!pilotName || pilotName.toLowerCase().includes('unknown character')) {
+          const npcLink = row.querySelector('.pilotinfo a[href*="/ship/"], .pilotinfo a, a[href*="/ship/"], a[href*="/item/"]');
+          const npcText = clean(npcLink?.textContent || '');
+          if (npcText) {
+            pilotName = npcText;
+          } else {
+            const imgAlt = row.querySelector('img.shipImageRender, img[src*="/types/"]')?.getAttribute('alt');
+            if (imgAlt) pilotName = clean(imgAlt);
+          }
+        }
+        if (!pilotName) pilotName = 'Unknown Attacker';
+
+        // Corp
         let corpName = '';
         let corpId = null;
-        const corpA = row.querySelector('a[href*="/corporation/"]');
-        if (corpA) {
-          corpName = clean(corpA.textContent);
-          const mCorp = corpA.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
-          if (mCorp) corpId = parseInt(mCorp[1], 10);
+        const corpLinks = Array.from(row.querySelectorAll('a[href*="/corporation/"]'));
+        const corpWithText = corpLinks.find(a => clean(a.textContent).length > 0);
+        if (corpWithText) {
+          corpName = clean(corpWithText.textContent);
+          const m = corpWithText.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+          if (m) corpId = parseInt(m[1], 10);
+        } else if (corpLinks[0]) {
+          const m = corpLinks[0].getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+          if (m) corpId = parseInt(m[1], 10);
+          const t = corpLinks[0].getAttribute('title') || corpLinks[0].getAttribute('data-bs-original-title');
+          if (t) corpName = clean(t);
         }
 
+        // Alliance
         let allianceName = '';
         let allianceId = null;
-        const allA = row.querySelector('a[href*="/alliance/"]');
-        if (allA) {
-          allianceName = clean(allA.textContent);
-          const mAll = allA.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
-          if (mAll) allianceId = parseInt(mAll[1], 10);
+        const allLinks = Array.from(row.querySelectorAll('a[href*="/alliance/"]'));
+        const allWithText = allLinks.find(a => clean(a.textContent).length > 0);
+        if (allWithText) {
+          allianceName = clean(allWithText.textContent);
+          const m = allWithText.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
+          if (m) allianceId = parseInt(m[1], 10);
+        } else if (allLinks[0]) {
+          const m = allLinks[0].getAttribute('href')?.match(/\/alliance\/(\d+)/i);
+          if (m) allianceId = parseInt(m[1], 10);
+          const t = allLinks[0].getAttribute('title') || allLinks[0].getAttribute('data-bs-original-title');
+          if (t) allianceName = clean(t);
         }
 
+        // Ship
         let shipName = '';
         let shipId = null;
-        const shipA = row.querySelector('a[href*="/ship/"]') || row.querySelector('img[src*="/types/"]');
+
+        const shipA = row.querySelector('a[href*="/ship/"]');
+        const shipImg = row.querySelector('img.shipImageRender, a[href*="/ship/"] img, img[src*="/types/"]');
+
         if (shipA) {
-          shipName = clean(shipA.textContent || shipA.getAttribute('alt') || shipA.getAttribute('title'));
-          const mShip = (shipA.getAttribute('href') || shipA.getAttribute('src'))?.match(/\/(?:ship|types)\/(\d+)/i);
-          if (mShip) shipId = parseInt(mShip[1], 10);
+          const m = shipA.getAttribute('href')?.match(/\/ship\/(\d+)/i);
+          if (m) shipId = parseInt(m[1], 10);
+          if (clean(shipA.textContent).length > 0) {
+            shipName = clean(shipA.textContent);
+          } else {
+            const t = shipA.getAttribute('title') || shipA.getAttribute('data-bs-original-title') || shipA.getAttribute('data-original-title');
+            if (t) shipName = clean(t);
+          }
         }
 
+        if (!shipName && shipImg) {
+          const alt = shipImg.getAttribute('alt') || shipImg.getAttribute('title');
+          if (alt) shipName = clean(alt);
+          if (!shipId) {
+            const m = shipImg.getAttribute('src')?.match(/\/types\/(\d+)/i);
+            if (m) shipId = parseInt(m[1], 10);
+          }
+        }
+
+        if (!shipName && pilotName && !charId) {
+          shipName = pilotName; // e.g. Awakened Preserver
+        }
+
+        // Weapon
         let weaponName = '';
         let weaponId = null;
-        const weaponImg = row.querySelector('img[src*="/types/"]:not([src*="' + shipId + '"])') || row.querySelectorAll('img[src*="/types/"]')[1];
-        if (weaponImg) {
-          weaponName = clean(weaponImg.getAttribute('alt') || weaponImg.getAttribute('title'));
-          const mW = weaponImg.getAttribute('src')?.match(/\/types\/(\d+)/i);
-          if (mW) weaponId = parseInt(mW[1], 10);
+
+        const itemA = row.querySelector('a[href*="/item/"], a[href*="/type/"]');
+        if (itemA) {
+          const m = itemA.getAttribute('href')?.match(/\/(?:item|type)\/(\d+)/i);
+          if (m) weaponId = parseInt(m[1], 10);
+          const t = itemA.getAttribute('title') || itemA.getAttribute('data-bs-original-title') || itemA.getAttribute('data-original-title') || itemA.textContent;
+          if (t) weaponName = clean(t);
         }
 
-        const isFinalBlow = /final blow/i.test(row.textContent) || !!row.querySelector('.fa-crosshairs, .final-blow, img[src*="blow"]');
+        if (!weaponName) {
+          const weaponImg = row.querySelector('img[src*="/types/"]:not([src*="' + shipId + '"])') ||
+                            row.querySelectorAll('img[src*="/types/"]')[1];
+          if (weaponImg) {
+            weaponName = clean(weaponImg.getAttribute('alt') || weaponImg.getAttribute('title') || '');
+            const m = weaponImg.getAttribute('src')?.match(/\/types\/(\d+)/i);
+            if (m) weaponId = parseInt(m[1], 10);
+          }
+        }
+
+        const isFinalBlow = /final blow/i.test(row.textContent) ||
+                            !!row.querySelector('.fa-crosshairs, .final-blow, .info_final_blow, img[src*="blow"]');
 
         attackers.push({
           pilotName,
@@ -243,11 +395,24 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       const isEveKill = currentUrl.includes('eve-kill') || currentUrl.includes('evekill');
       const source = isEveKill ? 'eve-kill' : 'zkillboard';
 
+      // Set top-level entity properties from victim
+      const entityName = victim.name ? (victim.ship ? `${victim.name}'s ${victim.ship}` : victim.name) : (victim.ship || 'Target Ship');
+      const entityCorp = victim.corp || '';
+      const entityCorpId = victim.corpId || null;
+      const entityAlliance = victim.alliance || '';
+      const entityAllianceId = victim.allianceId || null;
+      const finalEntityId = victim.characterId || entityId;
+
       return {
         success: true,
         source,
         entityType: 'killmail',
-        entityId,
+        entityId: finalEntityId,
+        entityName,
+        entityCorp,
+        entityCorpId,
+        entityAlliance,
+        entityAllianceId,
         pageUrl: currentUrl,
         extractedAt: new Date().toISOString(),
         victim,
