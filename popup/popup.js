@@ -58,6 +58,7 @@ const settingsDrawer = document.getElementById('settingsDrawer');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 const txtUrlPatterns = document.getElementById('txtUrlPatterns');
+const txtAstrumApiUrl = document.getElementById('txtAstrumApiUrl');
 const selDefaultFormat = document.getElementById('selDefaultFormat');
 const chkAutoCopy = document.getElementById('chkAutoCopy');
 
@@ -1043,6 +1044,7 @@ lnkZkillSandbox?.addEventListener('click', (e) => {
 btnSettings.addEventListener('click', async () => {
   currentSettings = await getSettings();
   txtUrlPatterns.value = (currentSettings.wandererUrlPatterns || []).join('\n');
+  txtAstrumApiUrl.value = currentSettings.astrumApiUrl || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest';
   selDefaultFormat.value = currentSettings.defaultFormat || 'tsv';
   chkAutoCopy.checked = !!currentSettings.autoCopy;
   settingsDrawer.classList.remove('hidden');
@@ -1061,6 +1063,7 @@ btnSaveSettings.addEventListener('click', async () => {
   const newSettings = {
     ...currentSettings,
     wandererUrlPatterns: patterns.length > 0 ? patterns : currentSettings.wandererUrlPatterns,
+    astrumApiUrl: txtAstrumApiUrl.value.trim() || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest',
     defaultFormat: selDefaultFormat.value,
     autoCopy: chkAutoCopy.checked
   };
