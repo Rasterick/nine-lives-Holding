@@ -108,7 +108,8 @@ async function verifyActiveTab() {
     const isZkillSandbox = tabUrl.includes('sandbox/test-zkill.html');
     const matchesPatterns = currentSettings.wandererUrlPatterns.some(pat => matchesUrlPattern(tab.url, pat));
 
-    const isZkill = tabUrl.includes('zkillboard.com') || tabUrl.includes('eve-kill.net') || isZkillSandbox;
+    const isEveKill = tabUrl.includes('eve-kill.com') || tabUrl.includes('eve-kill.net') || tabUrl.includes('evekill.com');
+    const isZkill = tabUrl.includes('zkillboard.com') || isEveKill || isZkillSandbox;
     const isWanderer = matchesPatterns || isWandererSandbox || tabUrl.includes('wanderer');
 
     if (isZkill) {
@@ -116,7 +117,7 @@ async function verifyActiveTab() {
     } else if (isWanderer) {
       setSyncedState(tab);
     } else {
-      setOffGridState(`Tab URL does not match Wanderer or zKillboard patterns:\n${tab.url.substring(0, 50)}...`);
+      setOffGridState(`Tab URL does not match Wanderer, zKillboard, or Eve-Kill patterns:\n${tab.url.substring(0, 50)}...`);
     }
   } catch (err) {
     console.error('Failed to query tab:', err);
@@ -170,12 +171,13 @@ function setZkillState(tab) {
   wandererActions?.classList.add('hidden');
   zkillActions?.classList.remove('hidden');
 
+  const isEveKill = (tab.url || '').toLowerCase().includes('eve-kill') || (tab.url || '').toLowerCase().includes('evekill');
   statusBadge.className = 'status-badge state-synced';
   statusBadge.style.borderColor = 'rgba(239, 68, 68, 0.6)';
-  statusText.textContent = 'ARMED [Z-KILL]';
+  statusText.textContent = isEveKill ? 'ARMED [EVE-KILL]' : 'ARMED [Z-KILL]';
   statusText.style.color = '#ef4444';
 
-  let hostname = 'ZKILLBOARD';
+  let hostname = isEveKill ? 'EVE-KILL' : 'ZKILLBOARD';
   try {
     const urlObj = new URL(tab.url);
     hostname = urlObj.hostname.toUpperCase();

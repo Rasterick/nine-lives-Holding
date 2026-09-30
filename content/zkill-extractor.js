@@ -240,8 +240,12 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         });
       });
 
+      const isEveKill = currentUrl.includes('eve-kill') || currentUrl.includes('evekill');
+      const source = isEveKill ? 'eve-kill' : 'zkillboard';
+
       return {
         success: true,
+        source,
         entityType: 'killmail',
         entityId,
         pageUrl: currentUrl,
@@ -347,8 +351,12 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
     const killsCount = selectedKills.filter(k => !k.isLoss).length;
     const lossesCount = selectedKills.filter(k => k.isLoss).length;
 
+    const isEveKill = currentUrl.includes('eve-kill') || currentUrl.includes('evekill');
+    const source = isEveKill ? 'eve-kill' : 'zkillboard';
+
     return {
       success: true,
+      source,
       entityType,
       entityId,
       entityName,
