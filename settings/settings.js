@@ -3,6 +3,7 @@ import { getSettings, saveSettings } from '../lib/storage.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const txtUrlPatterns = document.getElementById('txtUrlPatterns');
+  const txtAstrumApiUrl = document.getElementById('txtAstrumApiUrl');
   const selFormat = document.getElementById('selFormat');
   const chkAutoCopy = document.getElementById('chkAutoCopy');
   const btnSave = document.getElementById('btnSave');
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const settings = await getSettings();
   txtUrlPatterns.value = (settings.wandererUrlPatterns || []).join('\n');
+  txtAstrumApiUrl.value = settings.astrumApiUrl || 'http://localhost:8000/api/intel/tactical-ingest';
   selFormat.value = settings.defaultFormat || 'tsv';
   chkAutoCopy.checked = !!settings.autoCopy;
 
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const updated = {
       ...settings,
       wandererUrlPatterns: patterns.length > 0 ? patterns : settings.wandererUrlPatterns,
+      astrumApiUrl: txtAstrumApiUrl.value.trim() || 'http://localhost:8000/api/intel/tactical-ingest',
       defaultFormat: selFormat.value,
       autoCopy: chkAutoCopy.checked
     };

@@ -874,21 +874,23 @@ async function handleTransmitToAstrum() {
   }
 
   const payload = JSON.stringify(payloadObj);
+  const settings = await getSettings();
+  const endpoint = settings.astrumApiUrl || 'http://localhost:8000/api/intel/tactical-ingest';
   
   outputBox.innerHTML = `
     <div style="color: #00e5ff; font-weight: 700;">
       🚀 TRANSMITTING TELEMETRY TO ASTRUM INTEL...
     </div>
     <div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">
-      Dispatching payload to http://localhost:8000/api/intel/tactical-ingest...
+      Dispatching payload to ${endpoint}...
     </div>
   `;
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    const response = await fetch('http://localhost:8000/api/intel/tactical-ingest', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -900,12 +902,20 @@ async function handleTransmitToAstrum() {
     clearTimeout(timeoutId);
 
     if (response.ok) {
+      const resJson = await response.json().catch(() => null);
+      const hubUrl = resJson?.redirect_url || (endpoint.replace(/\/api\/intel\/tactical-ingest.*$/i, '/intel/tactical-hub'));
+
       outputBox.innerHTML = `
         <div style="color: #10b981; font-weight: 700;">
           [✓] TRANSMISSION CONFIRMED // ASTRUM INTEL
         </div>
         <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
-          Telemetry successfully ingested into Astrum Intel Operations Hub.
+          Telemetry successfully ingested into Astrum Operations Hub.
+        </div>
+        <div style="margin-top: 5px;">
+          <a href="${hubUrl}" target="_blank" style="color: #00e5ff; font-size: 8px; font-weight: 700; text-decoration: underline;">
+            ➔ OPEN TACTICAL HUB
+          </a>
         </div>
       `;
     } else {
@@ -917,10 +927,13 @@ async function handleTransmitToAstrum() {
         ⚠️ ASTRUM API UPLINK OFFLINE
       </div>
       <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
-        Could not reach local Astrum Intel server (${err.message || 'Connection refused'}).
+        Could not reach ${endpoint} (${err.message || 'Connection refused'}).
+      </div>
+      <div style="font-size: 8px; color: #94a3b8; margin-top: 3px;">
+        ⚙️ Check your Live Server URL in <strong>Settings (⚙️)</strong>.
       </div>
       <div style="font-size: 8px; color: #00e5ff; margin-top: 3px;">
-        💡 Telemetry JSON is safely copied in clipboard! Paste into Astrum Intel Ingest Modal.
+        💡 Telemetry JSON is safely copied to clipboard! Paste into Ingest Modal.
       </div>
     `;
     await copyOutputToClipboard(payload, false);
