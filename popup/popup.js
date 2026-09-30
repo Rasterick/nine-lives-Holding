@@ -5,7 +5,7 @@ import { extractWandererSvgData } from '../content/extractor.js';
 import { extractWandererSignatures } from '../content/signatures-extractor.js';
 import { extractWandererPilots } from '../content/pilots-extractor.js';
 import { extractZkillData } from '../content/zkill-extractor.js';
-import { crossReferenceTargetWithChain, saveWandererChain } from '../lib/chain-crossref.js';
+import { crossReferenceTargetWithChain, saveWandererChain, getCachedWandererChain } from '../lib/chain-crossref.js';
 import { formatSignaturesData, formatPilotsData, formatDiscordFlashReport, formatZkillData } from '../lib/formatters.js';
 
 // State variables
@@ -839,7 +839,35 @@ async function handleTransmitToAstrum() {
     return;
   }
 
-  const payload = formatZkillData(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef, 'json');
+  let payloadObj = null;
+  try {
+    payloadObj = JSON.parse(formatZkillData(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef, 'json'));
+  } catch {
+    payloadObj = {};
+  }
+
+  // Automatically attach cached Wanderer chain if present in extension storage
+  try {
+    const chainCache = await getCachedWandererChain();
+    if (chainCache?.chain && Array.isArray(chainCache.chain) && chainCache.chain.length > 0) {
+      payloadObj.chainMap = {
+        home_system: { name: 'J113907' },
+        synced_at: chainCache.timestamp ? new Date(chainCache.timestamp).toISOString() : new Date().toISOString(),
+        systems: chainCache.chain.map(c => ({
+          name: c.system || c.name,
+          class_raw: c.class || c.class_raw || 'W-Space',
+          tag: c.tag || c.tags || '-',
+          hops: typeof c.hops === 'number' ? c.hops : (c.system === 'J113907' ? 0 : 1),
+          pilots: c.pilots || 0,
+          statics: c.statics || '-'
+        }))
+      };
+    }
+  } catch (err) {
+    console.warn('Could not bundle chainMap:', err);
+  }
+
+  const payload = JSON.stringify(payloadObj);
   
   outputBox.innerHTML = `
     <div style="color: #00e5ff; font-weight: 700;">
