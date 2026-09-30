@@ -241,9 +241,9 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       const attackers = [];
 
       // Find candidate rows for attackers
-      let attackerRows = Array.from(doc.querySelectorAll('.killmail-attackers tr, tr.attacker, [class*="attacker"]'));
+      let attackerRows = Array.from(doc.querySelectorAll('tr.attacker, .killmail-attackers tbody tr, table#attackers tbody tr'));
 
-      // 1. Check Eve-Kill flex containers:
+      // 1. Check Eve-Kill flex containers if standard table rows aren't present:
       if (attackerRows.length <= 1) {
         const ekRows = Array.from(doc.querySelectorAll('div[class*="relative rounded-md overflow-hidden"], div[class*="relative flex items-center gap-2"]')).filter(el => {
           return el.querySelector('a[href*="/character/"], a[href*="/item/"], a[href*="/types/"], img[src*="/characters/"], img[src*="/types/"], .text-npc, [class*="text-npc"]');
@@ -274,6 +274,8 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       }
 
       attackerRows = attackerRows.filter(r => !r.closest?.('.titles') && !r.classList?.contains?.('titles') && !r.querySelector?.('th'));
+      // Filter out any row that is nested inside another matched candidate container
+      attackerRows = attackerRows.filter(el => !attackerRows.some(other => other !== el && other.contains?.(el)));
 
       attackerRows.forEach((row) => {
         // Pilot Name & Character ID
@@ -389,7 +391,13 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         if (itemA) {
           const m = itemA.getAttribute('href')?.match(/\/(?:item|type)\/(\d+)/i);
           if (m) weaponId = parseInt(m[1], 10);
-          const t = itemA.getAttribute('title') || itemA.getAttribute('data-bs-original-title') || itemA.getAttribute('data-original-title') || itemA.textContent;
+          const t = itemA.getAttribute('title') ||
+                    itemA.getAttribute('data-bs-original-title') ||
+                    itemA.getAttribute('data-original-title') ||
+                    itemA.getAttribute('aria-label') ||
+                    itemA.querySelector?.('img')?.getAttribute?.('alt') ||
+                    itemA.querySelector?.('img')?.getAttribute?.('title') ||
+                    itemA.textContent;
           if (t) weaponName = clean(t);
         }
 
@@ -471,6 +479,17 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       const entityAllianceId = victim.allianceId || null;
       const finalEntityId = victim.characterId || entityId;
 
+      // Deduplicate attackers by pilotName + shipName (e.g. from responsive/DataTables DOM clones)
+      const dedupedAttackers = [];
+      const seenAttackers = new Set();
+      for (const atk of attackers) {
+        const key = `${atk.characterId || atk.pilotName || ''}_${atk.shipId || atk.shipName || ''}`.toLowerCase();
+        if (!seenAttackers.has(key)) {
+          seenAttackers.add(key);
+          dedupedAttackers.push(atk);
+        }
+      }
+
       return {
         success: true,
         source,
@@ -487,10 +506,10 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         solarSystem,
         solarSystemId,
         timestamp,
-        gangCount: attackers.length,
-        attackers,
+        gangCount: dedupedAttackers.length,
+        attackers: dedupedAttackers,
         uniqueSystems: solarSystem ? [solarSystem] : [],
-        shipsObserved: [...new Set(attackers.map(a => a.shipName).filter(Boolean))]
+        shipsObserved: [...new Set(dedupedAttackers.map(a => a.shipName).filter(Boolean))]
       };
     }
 
