@@ -17,3 +17,9 @@ package-lock.json
 *.swp
 *.swo
 graphify-out/
+
+# Build artifacts & Scratch
+scratch/
+dist/
+*.zip
+
