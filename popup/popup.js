@@ -851,16 +851,20 @@ async function handleTransmitToAstrum() {
     const chainCache = await getCachedWandererChain();
     if (chainCache?.chain && Array.isArray(chainCache.chain) && chainCache.chain.length > 0) {
       payloadObj.chainMap = {
-        home_system: { name: 'J113907' },
+        home_system: { name: 'J215758' },
         synced_at: chainCache.timestamp ? new Date(chainCache.timestamp).toISOString() : new Date().toISOString(),
-        systems: chainCache.chain.map(c => ({
-          name: c.system || c.name,
-          class_raw: c.class || c.class_raw || 'W-Space',
-          tag: c.tag || c.tags || '-',
-          hops: typeof c.hops === 'number' ? c.hops : (c.system === 'J113907' ? 0 : 1),
-          pilots: c.pilots || 0,
-          statics: c.statics || '-'
-        }))
+        systems: chainCache.chain.map(c => {
+          const sysName = (c.system || c.name || '').toUpperCase();
+          const isHome = sysName === 'J215758' || sysName === 'J113907' || c.tag === 'PG' || c.isHome;
+          return {
+            name: c.system || c.name,
+            class_raw: c.class || c.class_raw || 'W-Space',
+            tag: c.tag || c.tags || '-',
+            hops: typeof c.hops === 'number' ? c.hops : (isHome ? 0 : 1),
+            pilots: c.pilots || 0,
+            statics: c.statics || '-'
+          };
+        })
       };
     }
   } catch (err) {

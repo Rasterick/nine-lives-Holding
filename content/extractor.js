@@ -165,7 +165,7 @@ export function extractWandererSvgData() {
       seenSystems.add(sysName.toUpperCase());
 
       const nodeTokens = [sysName];
-      const isHome = sysName.toUpperCase() === 'J113907' || sysName.toLowerCase().includes('home');
+      const isHome = sysName.toUpperCase() === 'J215758' || sysName.toUpperCase() === 'J113907' || sysName.toLowerCase().includes('home');
 
       // Signature: Look for 3-letter code or full cosmic sig inside THIS node container
       if (!isHome) {
