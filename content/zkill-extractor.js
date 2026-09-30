@@ -369,14 +369,15 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         if (!shipName || shipName === pilotName) {
           const eveKillShipSpan = Array.from(row.querySelectorAll('span.text-gray-400, span')).find(s => {
             const txt = clean(s.textContent);
-            return txt && txt !== '·' && !txt.includes('%') && !txt.includes(pilotName);
+            return txt && txt !== '·' && !txt.includes('%') && !/^[\d,.\s]+$/.test(txt) && !txt.includes(pilotName);
           });
           if (eveKillShipSpan) {
             shipName = clean(eveKillShipSpan.textContent);
           }
         }
 
-        if (!shipName && pilotName && !charId) {
+        // If shipName is empty or accidentally numeric, fallback cleanly
+        if ((!shipName || /^[\d,.\s]+$/.test(shipName)) && pilotName) {
           shipName = pilotName; // e.g. Awakened Preserver
         }
 
@@ -399,6 +400,18 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
             weaponName = clean(weaponImg.getAttribute?.('alt') || weaponImg.getAttribute?.('title') || '');
             const m = weaponImg.getAttribute?.('src')?.match(/\/types\/(\d+)/i);
             if (m) weaponId = parseInt(m[1], 10);
+          }
+        }
+
+        // If weapon is identical to pilot/ship name on NPC or if weapon is empty on NPC:
+        // Extract damage numbers (e.g. "98,591 (80.5%)") to present meaningful combat contribution
+        if (!charId && (weaponName === pilotName || !weaponName || weaponName === shipName)) {
+          const rowText = clean(row.textContent || '');
+          const dmgMatch = rowText.match(/([\d,]+)\s+([\d.]+%)?/);
+          if (dmgMatch) {
+            weaponName = `${dmgMatch[1]} dmg${dmgMatch[2] ? ' (' + dmgMatch[2] + ')' : ''}`;
+          } else {
+            weaponName = 'Sleeper Battery';
           }
         }
 
