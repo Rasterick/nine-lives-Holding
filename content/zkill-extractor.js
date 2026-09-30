@@ -232,6 +232,44 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         }
       }
 
+      // Document-wide fallback search for victim IDs (essential for Eve-Kill flex layouts)
+      if (!victim.characterId && victim.name) {
+        const charLinks = Array.from(doc.querySelectorAll('a[href*="/character/"]'));
+        const victimLink = charLinks.find(a => clean(a.textContent) === victim.name || clean(a.getAttribute('title') || '') === victim.name);
+        if (victimLink) {
+          const m = victimLink.getAttribute('href')?.match(/\/character\/(\d+)/i);
+          if (m) victim.characterId = parseInt(m[1], 10);
+        }
+        if (!victim.characterId) {
+          const charImg = doc.querySelector(`img[alt="${victim.name}"][src*="/characters/"]`);
+          const m = charImg?.getAttribute('src')?.match(/\/characters\/(\d+)/i);
+          if (m) victim.characterId = parseInt(m[1], 10);
+        }
+      }
+
+      if (!victim.shipId && victim.ship) {
+        const shipLinks = Array.from(doc.querySelectorAll('a[href*="/item/"], a[href*="/ship/"]'));
+        const shipLink = shipLinks.find(a => clean(a.textContent) === victim.ship || clean(a.getAttribute('title') || '') === victim.ship || a.querySelector(`img[alt*="${victim.ship}" i]`));
+        if (shipLink) {
+          const m = shipLink.getAttribute('href')?.match(/\/(?:item|ship)\/(\d+)/i);
+          if (m) victim.shipId = parseInt(m[1], 10);
+        }
+        if (!victim.shipId) {
+          const shipImg = doc.querySelector(`img[alt*="${victim.ship}" i][src*="/types/"], img[alt*="${victim.ship}" i][src*="/item/"]`);
+          const m = shipImg?.getAttribute('src')?.match(/\/(?:types|item)\/(\d+)/i);
+          if (m) victim.shipId = parseInt(m[1], 10);
+        }
+      }
+
+      if (!victim.corpId && victim.corp) {
+        const corpLinks = Array.from(doc.querySelectorAll('a[href*="/corporation/"]'));
+        const corpLink = corpLinks.find(a => clean(a.textContent) === victim.corp || clean(a.getAttribute('title') || '') === victim.corp);
+        if (corpLink) {
+          const m = corpLink.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+          if (m) victim.corpId = parseInt(m[1], 10);
+        }
+      }
+
       const timeEl = doc.querySelector('.info_kill_dttm') || doc.querySelector('[datetime]') || doc.querySelector('[data-timestamp]') || doc.querySelector('.time') || doc.querySelector('.killmail-time');
       timestamp = parseTimestamp(timeEl);
 
