@@ -39,7 +39,8 @@ export function extractWandererSvgData() {
     'JITA', 'THERA', 'AMAMAKE', 'POITOT', 'HEK', 'DODIXIE', 'RENS', 'AMARR',
     'RANCER', 'TAMA', 'NIARJA', 'B-R5RB', 'M-OEE8', 'V-3YG7',
     'ORDUIN', 'LOGUTTUR', 'MERCOMESIER', 'ZORORZIH', 'AIKANTOH', 'APANAKE',
-    'PAKHSHI', 'KASSIGAINEN'
+    'PAKHSHI', 'KASSIGAINEN', 'LIBERATED BARBICAN', 'BARBICAN', 'VIDETTE',
+    'REDOUBT', 'SENTINEL', 'CONFLUX'
   ]);
 
   function isSystemIdentifier(token) {
