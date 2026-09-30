@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mitch Caldera | Character | zKillboard Mock Sandbox</title>
+  <style>
+    body { font-family: sans-serif; background: #121212; color: #e0e0e0; margin: 20px; }
+    h1 { color: #00e5ff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #333; padding: 8px 12px; text-align: left; }
+    th { background: #1f293d; }
+    .loss { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+    .kill { background: rgba(16, 185, 129, 0.15); color: #86efac; }
+    a { color: #38bdf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .badge-corp { background: #1e3a5f; color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Mitch Caldera</h1>
+    <p>
+      Corporation: <a href="/corporation/98654321/" class="badge badge-corp">Black Flag Syndicate [BFS]</a> |
+      Alliance: <a href="/alliance/99001122/">Wormhole Marauders Coalition</a>
+    </p>
+  </div>
+
+  <h2>Recent Combat Activity (Kills & Losses)</h2>
+  <table class="table table-striped killlist">
+    <thead>
+      <tr>
+        <th>Killmail</th>
+        <th>System</th>
+        <th>Ship Destroyed / Lost</th>
+        <th>Target / Victim</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="kill">
+        <td><a href="/kill/120994101/">#120994101</a></td>
+        <td><a href="/system/31001429/">J142923</a></td>
+        <td><a href="/ship/17476/"><img src="https://images.evetech.net/types/17476/render?size=32" alt="Covetor"> Covetor</a></td>
+        <td><a href="/character/95432101/">Mining Scout 01</a></td>
+        <td data-timestamp="2026-09-30T10:55:00Z" title="2026-09-30 10:55:00 UTC">18m ago</td>
+      </tr>
+      <tr class="kill">
+        <td><a href="/kill/120993950/">#120993950</a></td>
+        <td><a href="/system/31001429/">J142923</a></td>
+        <td><a href="/ship/605/"><img src="https://images.evetech.net/types/605/render?size=32" alt="Heron"> Heron</a></td>
+        <td><a href="/character/95432102/">Relic Hunter</a></td>
+        <td data-timestamp="2026-09-30T10:42:00Z" title="2026-09-30 10:42:00 UTC">32m ago</td>
+      </tr>
+      <tr class="kill">
+        <td><a href="/kill/120992800/">#120992800</a></td>
+        <td><a href="/system/30002187/">Amamake</a></td>
+        <td><a href="/ship/17703/"><img src="https://images.evetech.net/types/17703/render?size=32" alt="Imperial Navy Slicer"> Imperial Navy Slicer</a></td>
+        <td><a href="/character/95432103/">Faction War Pilot</a></td>
+        <td data-timestamp="2026-09-30T09:30:00Z" title="2026-09-30 09:30:00 UTC">1h 45m ago</td>
+      </tr>
+      <tr class="loss">
+        <td><a href="/kill/120991200/">#120991200</a></td>
+        <td><a href="/system/30002187/">Amamake</a></td>
+        <td><a href="/ship/29988/"><img src="https://images.evetech.net/types/29988/render?size=32" alt="Proteus"> Proteus</a></td>
+        <td><a href="/character/2114758784/">Mitch Caldera</a></td>
+        <td data-timestamp="2026-09-30T08:15:00Z" title="2026-09-30 08:15:00 UTC">3h ago</td>
+      </tr>
+      <tr class="kill">
+        <td><a href="/kill/120990150/">#120990150</a></td>
+        <td><a href="/system/31002157/">J215758</a></td>
+        <td><a href="/ship/32880/"><img src="https://images.evetech.net/types/32880/render?size=32" alt="Venture"> Venture</a></td>
+        <td><a href="/character/95432104/">Gas Huff Pilot</a></td>
+        <td data-timestamp="2026-09-30T07:10:00Z" title="2026-09-30 07:10:00 UTC">4h ago</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Mock Single Killmail Section for Attackers Extraction testing -->
+  <h2 style="margin-top: 40px;">Mock Individual Killmail Attackers View (/kill/120994101/)</h2>
+  <div class="killmail-attackers">
+    <table>
+      <thead>
+        <tr>
+          <th>Attacker Pilot</th>
+          <th>Corporation</th>
+          <th>Ship</th>
+          <th>Weapon</th>
+          <th>Role / Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="/character/2114758784/"><img src="https://images.evetech.net/characters/2114758784/portrait?size=32" alt="Mitch Caldera"> Mitch Caldera</a></td>
+          <td><a href="/corporation/98654321/">Black Flag Syndicate</a></td>
+          <td><a href="/ship/29988/"><img src="https://images.evetech.net/types/29988/render?size=32" alt="Proteus"> Proteus</a></td>
+          <td><img src="https://images.evetech.net/types/3108/render?size=32" alt="Heavy Neutron Blaster II"> Heavy Neutron Blaster II</td>
+          <td><strong>Final Blow</strong> (64%)</td>
+        </tr>
+        <tr>
+          <td><a href="/character/2119876543/"><img src="https://images.evetech.net/characters/2119876543/portrait?size=32" alt="Tackle Wingman"> Tackle Wingman</a></td>
+          <td><a href="/corporation/98654321/">Black Flag Syndicate</a></td>
+          <td><a href="/ship/22456/"><img src="https://images.evetech.net/types/22456/render?size=32" alt="Sabre"> Sabre</a></td>
+          <td><img src="https://images.evetech.net/types/2889/render?size=32" alt="Warp Disruption Field Generator"> Warp Disruption Field Generator</td>
+          <td>Interdictor Bubble (22%)</td>
+        </tr>
+        <tr>
+          <td><a href="/character/2115544332/"><img src="https://images.evetech.net/characters/2115544332/portrait?size=32" alt="Web Hunter"> Web Hunter</a></td>
+          <td><a href="/corporation/98654321/">Black Flag Syndicate</a></td>
+          <td><a href="/ship/29990/"><img src="https://images.evetech.net/types/29990/render?size=32" alt="Loki"> Loki</a></td>
+          <td><img src="https://images.evetech.net/types/3108/render?size=32" alt="220mm Vulcan AutoCannon II"> 220mm Vulcan AutoCannon II</td>
+          <td>Long Web / Tackle (14%)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -64,83 +64,135 @@
     <!-- Primary Tactical Action Buttons Area -->
     <div class="actions-container">
 
-      <!-- Action 1: Get Wanderer Systems (ACTIVE & ARMED) -->
-      <button id="btnSystems" class="tactical-btn btn-active group">
-        <div class="btn-inner">
-          <div class="action-glyph glyph-cyan">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <circle cx="12" cy="12" r="4"></circle>
-              <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
-              <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line>
-              <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line>
-              <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
-            </svg>
-          </div>
-          <div class="btn-text">
-            <div class="btn-title-row">
-              <span class="btn-title">Get Wanderer Systems</span>
-              <span class="btn-tag tag-cyan">[W-SPACE]</span>
+      <!-- WANDERER ACTIONS PANEL -->
+      <div id="wandererActions" class="actions-group">
+        <!-- Action 1: Get Wanderer Systems (ACTIVE & ARMED) -->
+        <button id="btnSystems" class="tactical-btn btn-active group">
+          <div class="btn-inner">
+            <div class="action-glyph glyph-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
+                <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line>
+                <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line>
+                <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
+              </svg>
             </div>
-            <div class="btn-desc">
-              AI extract connected wormhole chain &amp; copy TSV
+            <div class="btn-text">
+              <div class="btn-title-row">
+                <span class="btn-title">Get Wanderer Systems</span>
+                <span class="btn-tag tag-cyan">[W-SPACE]</span>
+              </div>
+              <div class="btn-desc">
+                AI extract connected wormhole chain &amp; copy TSV
+              </div>
             </div>
           </div>
-        </div>
-        <div class="arrow-indicator">➔</div>
-        <div class="corner-dot dot-cyan"></div>
-      </button>
+          <div class="arrow-indicator">➔</div>
+          <div class="corner-dot dot-cyan"></div>
+        </button>
 
-      <!-- Action 2: Get System Signatures (ACTIVE & ARMED) -->
-      <button id="btnSignatures" class="tactical-btn btn-active group" title="Extract active system signatures & copy to clipboard">
-        <div class="btn-inner">
-          <div class="action-glyph glyph-amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="22" y1="12" x2="18" y2="12"></line>
-              <line x1="6" y1="12" x2="2" y2="12"></line>
-              <line x1="12" y1="6" x2="12" y2="2"></line>
-              <line x1="12" y1="22" x2="12" y2="18"></line>
-            </svg>
-          </div>
-          <div class="btn-text">
-            <div class="btn-title-row">
-              <span class="btn-title">Get System Signatures</span>
-              <span class="btn-tag tag-amber">[SIGS]</span>
+        <!-- Action 2: Get System Signatures (ACTIVE & ARMED) -->
+        <button id="btnSignatures" class="tactical-btn btn-active group" title="Extract active system signatures & copy to clipboard">
+          <div class="btn-inner">
+            <div class="action-glyph glyph-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="22" y1="12" x2="18" y2="12"></line>
+                <line x1="6" y1="12" x2="2" y2="12"></line>
+                <line x1="12" y1="6" x2="12" y2="2"></line>
+                <line x1="12" y1="22" x2="12" y2="18"></line>
+              </svg>
             </div>
-            <div class="btn-desc">
-              Extract active system signatures &amp; copy TSV
+            <div class="btn-text">
+              <div class="btn-title-row">
+                <span class="btn-title">Get System Signatures</span>
+                <span class="btn-tag tag-amber">[SIGS]</span>
+              </div>
+              <div class="btn-desc">
+                Extract active system signatures &amp; copy TSV
+              </div>
             </div>
           </div>
-        </div>
-        <div class="arrow-indicator">➔</div>
-        <div class="corner-dot dot-amber"></div>
-      </button>
+          <div class="arrow-indicator">➔</div>
+          <div class="corner-dot dot-amber"></div>
+        </button>
 
-      <!-- Action 3: Get Pilots in System (ACTIVE & ARMED) -->
-      <button id="btnPilots" class="tactical-btn btn-active group" title="Extract active system pilots roster &amp; copy to clipboard&#10;💡 Pro-Tip: Keep 'Ship name' [✓] checked in Wanderer for custom fleet tags.">
-        <div class="btn-inner">
-          <div class="action-glyph glyph-emerald">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-          </div>
-          <div class="btn-text">
-            <div class="btn-title-row">
-              <span class="btn-title">Get Pilots in System</span>
-              <span class="btn-tag tag-emerald">[LOCAL]</span>
+        <!-- Action 3: Get Pilots in System (ACTIVE & ARMED) -->
+        <button id="btnPilots" class="tactical-btn btn-active group" title="Extract active system pilots roster &amp; copy to clipboard&#10;💡 Pro-Tip: Keep 'Ship name' [✓] checked in Wanderer for custom fleet tags.">
+          <div class="btn-inner">
+            <div class="action-glyph glyph-emerald">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
             </div>
-            <div class="btn-desc">
-              Scrape local identities, ships &amp; copy TSV
+            <div class="btn-text">
+              <div class="btn-title-row">
+                <span class="btn-title">Get Pilots in System</span>
+                <span class="btn-tag tag-emerald">[LOCAL]</span>
+              </div>
+              <div class="btn-desc">
+                Scrape local identities, ships &amp; copy TSV
+              </div>
             </div>
           </div>
+          <div class="arrow-indicator">➔</div>
+          <div class="corner-dot dot-emerald"></div>
+        </button>
+      </div>
+
+      <!-- ZKILLBOARD / EVE-KILL TARGET ACTIONS PANEL -->
+      <div id="zkillActions" class="actions-group hidden">
+        <!-- Main Target Intel Button -->
+        <button id="btnZkillTarget" class="tactical-btn btn-active group" title="Extract kills, doctrine, and cross-reference with Wanderer chain">
+          <div class="btn-inner">
+            <div class="action-glyph glyph-crimson">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="22" y1="12" x2="18" y2="12"></line>
+                <line x1="6" y1="12" x2="2" y2="12"></line>
+                <line x1="12" y1="6" x2="12" y2="2"></line>
+                <line x1="12" y1="22" x2="12" y2="18"></line>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </div>
+            <div class="btn-text">
+              <div class="btn-title-row">
+                <span class="btn-title">Analyze Target Intel</span>
+                <span class="btn-tag tag-crimson">[Z-KILL]</span>
+              </div>
+              <div class="btn-desc">
+                Extract kills, doctrine &amp; check chain proximity
+              </div>
+            </div>
+          </div>
+          <div class="arrow-indicator">➔</div>
+          <div class="corner-dot dot-crimson"></div>
+        </button>
+
+        <!-- Quick Tactical Actions Toolbar -->
+        <div class="zkill-quick-toolbar">
+          <button id="btnDiscordFlash" class="quick-act-btn" title="Copy 5-second Flash Report for Discord chat">
+            <span>📋</span> DISCORD FLASH
+          </button>
+          <button id="btnTransmitAstrum" class="quick-act-btn btn-uplink" title="1-Click background dispatch into Astrum Intel Hub">
+            <span>🚀</span> TRANSMIT TO ASTRUM
+          </button>
         </div>
-        <div class="arrow-indicator">➔</div>
-        <div class="corner-dot dot-emerald"></div>
-      </button>
+
+        <!-- Chain Proximity & Staleness Card -->
+        <div id="chainProximityCard" class="proximity-card hidden">
+          <div class="prox-header">
+            <span class="prox-icon">📡</span>
+            <span id="proxTitle" class="prox-title">CHAIN PROXIMITY TELEMETRY</span>
+          </div>
+          <div id="proxDetails" class="prox-details">Awaiting target analysis...</div>
+        </div>
+      </div>
 
     </div>
 
@@ -170,10 +222,10 @@
       <div id="outputBox" class="output-box">
         <div class="status-line">
           <span class="dot-emerald">●</span>
-          <span class="standby-text">STANDBY // AWAITING WANDERER INGEST TRIGGER</span>
+          <span class="standby-text">STANDBY // AWAITING TACTICAL INGEST TRIGGER</span>
         </div>
         <div class="standby-hint">
-          Click "Get Wanderer Systems" to extract chain topology into clipboard.
+          Open Wanderer or zKillboard tab to arm tactical ingest modules.
         </div>
       </div>
     </div>
@@ -181,8 +233,11 @@
     <!-- Bottom Mini Utility Bar -->
     <footer class="utility-bar">
       <div class="utility-links">
-        <a id="lnkSandbox" href="#" class="util-link">
-          <span>[ TEST MAP SANDBOX ]</span>
+        <a id="lnkSandbox" href="#" class="util-link" title="Open mock Wanderer map">
+          <span>[ MOCK WANDERER ]</span>
+        </a>
+        <a id="lnkZkillSandbox" href="#" class="util-link" title="Open mock zKillboard profile">
+          <span>[ MOCK ZKILL ]</span>
         </a>
       </div>
       <div class="latency-stat">

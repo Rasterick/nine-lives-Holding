@@ -734,3 +734,140 @@ body {
   background: rgba(0, 229, 255, 0.3);
   box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
+
+/* Actions Groups and Panel Toggling */
+.actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.actions-group.hidden {
+  display: none;
+}
+
+/* Crimson Accents for zKill Module */
+.glyph-crimson {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--aura-crimson);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.tag-crimson {
+  color: var(--aura-crimson);
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dot-crimson {
+  background-color: var(--aura-crimson);
+  box-shadow: 0 0 6px var(--aura-crimson);
+}
+
+/* Quick Tactical Actions Toolbar */
+.zkill-quick-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.quick-act-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--aura-border);
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-act-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+.quick-act-btn.btn-uplink {
+  border-color: rgba(0, 229, 255, 0.4);
+  color: var(--aura-cyan);
+  background: rgba(0, 229, 255, 0.08);
+}
+
+.quick-act-btn.btn-uplink:hover {
+  background: rgba(0, 229, 255, 0.18);
+  border-color: var(--aura-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+}
+
+/* Chain Proximity Alert Card */
+.proximity-card {
+  padding: 8px 10px;
+  background: rgba(10, 18, 30, 0.95);
+  border: 1px solid var(--aura-border);
+  border-radius: 4px;
+  font-size: 8.5px;
+  line-height: 1.35;
+  transition: all 0.2s ease;
+}
+
+.proximity-card.hidden {
+  display: none;
+}
+
+.proximity-card.alert-critical {
+  border-color: var(--aura-crimson);
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.proximity-card.alert-elevated {
+  border-color: var(--aura-amber);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.prox-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: #e2e8f0;
+}
+
+.prox-details {
+  color: #94a3b8;
+}
+
+.prox-staleness-warning {
+  margin-top: 4px;
+  color: var(--aura-amber);
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-refresh-chain {
+  background: transparent;
+  border: 1px solid var(--aura-amber);
+  color: var(--aura-amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.btn-refresh-chain:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+

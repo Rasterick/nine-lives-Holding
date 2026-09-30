@@ -1,35 +1,56 @@
 // popup/popup.js
 import { getSettings, saveSettings } from '../lib/storage.js';
-import { parseWithChromeAI, formatTacticalData } from '../lib/ai.js';
+import { parseWithChromeAI, formatTacticalData, synthesizeZkillThreatWithAI } from '../lib/ai.js';
 import { extractWandererSvgData } from '../content/extractor.js';
 import { extractWandererSignatures } from '../content/signatures-extractor.js';
 import { extractWandererPilots } from '../content/pilots-extractor.js';
-import { formatSignaturesData, formatPilotsData } from '../lib/formatters.js';
+import { extractZkillData } from '../content/zkill-extractor.js';
+import { crossReferenceTargetWithChain, saveWandererChain } from '../lib/chain-crossref.js';
+import { formatSignaturesData, formatPilotsData, formatDiscordFlashReport, formatZkillData } from '../lib/formatters.js';
 
 // State variables
 let currentTab = null;
+let tabMode = 'wanderer'; // 'wanderer' | 'zkill' | 'offgrid'
 let isWandererTab = false;
 let parsedRecords = [];
 let parsedSignaturesData = null;
 let parsedPilotsData = null;
+let parsedZkillData = null;
+let parsedThreatSynthesis = null;
+let parsedChainCrossRef = null;
 let lastIngestType = 'systems';
 let currentFormat = 'tsv';
 let currentSettings = null;
 
-// UI Elements
+// UI Elements - Core
 const statusBadge = document.getElementById('statusBadge');
 const statusText = document.getElementById('statusText');
 const systemLoc = document.getElementById('systemLoc');
 const systemSec = document.getElementById('systemSec');
 const aiEngineLabel = document.getElementById('aiEngineLabel');
-const btnSystems = document.getElementById('btnSystems');
-const btnSignatures = document.getElementById('btnSignatures');
-const btnPilots = document.getElementById('btnPilots');
 const outputBox = document.getElementById('outputBox');
 const timestampEl = document.getElementById('timestamp');
 const latencyValue = document.getElementById('latencyValue');
 const btnCopyAgain = document.getElementById('btnCopyAgain');
 const lnkSandbox = document.getElementById('lnkSandbox');
+const lnkZkillSandbox = document.getElementById('lnkZkillSandbox');
+
+// UI Elements - Panels
+const wandererActions = document.getElementById('wandererActions');
+const zkillActions = document.getElementById('zkillActions');
+
+// UI Elements - Wanderer
+const btnSystems = document.getElementById('btnSystems');
+const btnSignatures = document.getElementById('btnSignatures');
+const btnPilots = document.getElementById('btnPilots');
+
+// UI Elements - zKillboard
+const btnZkillTarget = document.getElementById('btnZkillTarget');
+const btnDiscordFlash = document.getElementById('btnDiscordFlash');
+const btnTransmitAstrum = document.getElementById('btnTransmitAstrum');
+const chainProximityCard = document.getElementById('chainProximityCard');
+const proxTitle = document.getElementById('proxTitle');
+const proxDetails = document.getElementById('proxDetails');
 
 // Settings Drawer Elements
 const btnSettings = document.getElementById('btnSettings');
@@ -83,13 +104,19 @@ async function verifyActiveTab() {
     }
 
     const tabUrl = tab.url.toLowerCase();
-    const isSandbox = tabUrl.includes('sandbox/test-map.html') || tabUrl.startsWith('chrome-extension://');
+    const isWandererSandbox = tabUrl.includes('sandbox/test-map.html');
+    const isZkillSandbox = tabUrl.includes('sandbox/test-zkill.html');
     const matchesPatterns = currentSettings.wandererUrlPatterns.some(pat => matchesUrlPattern(tab.url, pat));
 
-    if (matchesPatterns || isSandbox || tabUrl.includes('wanderer')) {
+    const isZkill = tabUrl.includes('zkillboard.com') || tabUrl.includes('eve-kill.net') || isZkillSandbox;
+    const isWanderer = matchesPatterns || isWandererSandbox || tabUrl.includes('wanderer');
+
+    if (isZkill) {
+      setZkillState(tab);
+    } else if (isWanderer) {
       setSyncedState(tab);
     } else {
-      setOffGridState(`Tab URL does not match Wanderer patterns:\n${tab.url.substring(0, 50)}...`);
+      setOffGridState(`Tab URL does not match Wanderer or zKillboard patterns:\n${tab.url.substring(0, 50)}...`);
     }
   } catch (err) {
     console.error('Failed to query tab:', err);
@@ -98,7 +125,12 @@ async function verifyActiveTab() {
 }
 
 function setSyncedState(tab) {
+  tabMode = 'wanderer';
   isWandererTab = true;
+
+  wandererActions?.classList.remove('hidden');
+  zkillActions?.classList.add('hidden');
+
   statusBadge.className = 'status-badge state-synced';
   statusText.textContent = 'SYNCED';
 
@@ -112,21 +144,75 @@ function setSyncedState(tab) {
   systemSec.textContent = '-1.0 (CONNECTED)';
   systemSec.className = 'tag-crimson';
 
-  btnSystems.disabled = false;
-  btnSystems.classList.remove('btn-deactivated');
-  btnSystems.classList.add('btn-active');
+  if (btnSystems) {
+    btnSystems.disabled = false;
+    btnSystems.classList.remove('btn-deactivated');
+    btnSystems.classList.add('btn-active');
+  }
 
   if (btnSignatures) {
     btnSignatures.disabled = false;
     btnSignatures.classList.remove('btn-deactivated');
     btnSignatures.classList.add('btn-active');
   }
+
+  if (btnPilots) {
+    btnPilots.disabled = false;
+    btnPilots.classList.remove('btn-deactivated');
+    btnPilots.classList.add('btn-active');
+  }
+}
+
+function setZkillState(tab) {
+  tabMode = 'zkill';
+  isWandererTab = false;
+
+  wandererActions?.classList.add('hidden');
+  zkillActions?.classList.remove('hidden');
+
+  statusBadge.className = 'status-badge state-synced';
+  statusBadge.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+  statusText.textContent = 'ARMED [Z-KILL]';
+  statusText.style.color = '#ef4444';
+
+  let hostname = 'ZKILLBOARD';
+  try {
+    const urlObj = new URL(tab.url);
+    hostname = urlObj.hostname.toUpperCase();
+  } catch {}
+
+  systemLoc.textContent = hostname;
+  systemSec.textContent = 'TARGET INTEL';
+  systemSec.className = 'tag-crimson';
+
+  if (btnZkillTarget) {
+    btnZkillTarget.disabled = false;
+    btnZkillTarget.classList.remove('btn-deactivated');
+    btnZkillTarget.classList.add('btn-active');
+  }
+
+  outputBox.innerHTML = `
+    <div style="color: #ef4444; font-weight: 700; display: flex; justify-content: space-between;">
+      <span>🎯 TARGET KILLBOARD DETECTED</span>
+      <span style="font-size: 8px; color: #94a3b8;">${hostname}</span>
+    </div>
+    <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+      Click <strong>"Analyze Target Intel"</strong> to harvest recent kills, gang composition, and cross-reference with active wormhole chain.
+    </div>
+  `;
 }
 
 function setOffGridState(reason) {
+  tabMode = 'offgrid';
   isWandererTab = false;
+
+  wandererActions?.classList.remove('hidden');
+  zkillActions?.classList.add('hidden');
+
   statusBadge.className = 'status-badge state-offgrid';
+  statusBadge.style.borderColor = '';
   statusText.textContent = 'OFF-GRID';
+  statusText.style.color = '';
 
   systemLoc.textContent = 'STANDALONE';
   systemSec.textContent = 'UNVERIFIED';
@@ -139,13 +225,13 @@ function setOffGridState(reason) {
 
   outputBox.innerHTML = `
     <div style="color: #ef4444; font-weight: 700; margin-bottom: 4px;">
-      ▲ OFF-GRID // NOT ON WANDERER
+      ▲ OFF-GRID // UNVERIFIED TAB
     </div>
     <div style="font-size: 8.5px; color: #94a3b8; line-height: 1.4;">
       ${reason}
     </div>
     <div style="margin-top: 6px; font-size: 8px; color: #00e5ff;">
-      ➔ Click "[ TEST MAP SANDBOX ]" below to test offline on your laptop!
+      ➔ Click "[ MOCK WANDERER ]" or "[ MOCK ZKILL ]" below to test offline on your laptop!
     </div>
   `;
 }
@@ -277,6 +363,7 @@ async function handleIngestWandererSystems() {
     );
 
     parsedRecords = records;
+    await saveWandererChain(records);
     const elapsed = Date.now() - startTime;
     latencyValue.textContent = `${elapsed}ms`;
 
@@ -567,8 +654,253 @@ if (btnPilots) {
   });
 }
 
+// Handle zKillboard Target Ingestion
+async function handleIngestZkillTarget() {
+  if (!currentTab?.id) {
+    alert('No active tab identified. Please navigate to zKillboard or Eve-Kill.');
+    return;
+  }
+
+  const startTime = Date.now();
+  updateTimestamp();
+
+  outputBox.innerHTML = `
+    <div style="color: #ef4444; font-weight: 700;">
+      ◈ SCANNING TARGET KILLBOARD DOM...
+    </div>
+    <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+      Harvesting combat events, gang attackers, and checking active chain proximity...
+    </div>
+  `;
+
+  try {
+    let extraction = null;
+
+    if (currentTab.url && currentTab.url.includes('sandbox/test-zkill.html')) {
+      const execResults = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        func: extractZkillData
+      });
+      extraction = execResults?.[0]?.result;
+    } else {
+      const execResults = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id, allFrames: false },
+        func: extractZkillData
+      });
+      extraction = execResults?.[0]?.result;
+    }
+
+    if (!extraction || !extraction.success) {
+      outputBox.innerHTML = `
+        <div style="color: #f59e0b; font-weight: 700;">
+          [!] TARGET EXTRACTION ALERT
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+          ${extraction?.error || 'Unable to parse killmail elements from page. Ensure zKillboard/Eve-Kill table is loaded.'}
+        </div>
+      `;
+      return;
+    }
+
+    // 1. Cross-reference target systems against cached Wanderer chain
+    const crossRef = await crossReferenceTargetWithChain(extraction.uniqueSystems, extraction.recentEvents);
+    parsedChainCrossRef = crossRef;
+
+    // Update Proximity Card UI
+    if (chainProximityCard) {
+      chainProximityCard.classList.remove('hidden', 'alert-critical', 'alert-elevated');
+      
+      let stalenessHtml = '';
+      if (crossRef.isStale) {
+        stalenessHtml = `
+          <div class="prox-staleness-warning">
+            <span>⚠️ Chain data is ${crossRef.chainAgeMinutes !== null ? crossRef.chainAgeMinutes + 'm' : 'unknown'} old</span>
+            <button id="btnRefreshChain" class="btn-refresh-chain">REFRESH WANDERER</button>
+          </div>
+        `;
+      }
+
+      if (crossRef.hasIntersection) {
+        if (crossRef.highestThreatLevel === 'CRITICAL_HOME') {
+          chainProximityCard.classList.add('alert-critical');
+          proxTitle.innerHTML = `<span style="color:#ef4444;">🔥 CRITICAL // HOME SYSTEM BREACH</span>`;
+          proxDetails.innerHTML = `Target was active directly in <strong>HOME SYSTEM</strong>! Recent activity recorded.<br>${stalenessHtml}`;
+        } else if (crossRef.highestThreatLevel === 'CRITICAL') {
+          chainProximityCard.classList.add('alert-critical');
+          proxTitle.innerHTML = `<span style="color:#ef4444;">🚨 RED ALERT // 1 HOP FROM HOME</span>`;
+          proxDetails.innerHTML = `Target active in <strong>${crossRef.hotSystems.map(h => h.system).join(', ')}</strong> (1 hop from Home)!<br>${stalenessHtml}`;
+        } else if (crossRef.highestThreatLevel === 'ELEVATED') {
+          chainProximityCard.classList.add('alert-elevated');
+          proxTitle.innerHTML = `<span style="color:#f59e0b;">⚠️ ELEVATED // 2 HOPS FROM HOME</span>`;
+          proxDetails.innerHTML = `Target active in <strong>${crossRef.hotSystems.map(h => h.system).join(', ')}</strong> (2 hops away).<br>${stalenessHtml}`;
+        } else {
+          proxTitle.innerHTML = `📡 CHAIN TELEMETRY INTERSECTION`;
+          proxDetails.innerHTML = `Activity matches chain node(s): <strong>${crossRef.hotSystems.map(h => h.system).join(', ')}</strong>.<br>${stalenessHtml}`;
+        }
+      } else {
+        proxTitle.innerHTML = `🛡️ NO CHAIN INTERSECTION DETECTED`;
+        proxDetails.innerHTML = `Target systems do not intersect your active Wanderer chain nodes.<br>${stalenessHtml}`;
+      }
+
+      // Add listener to refresh chain button if present
+      const refreshBtn = document.getElementById('btnRefreshChain');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+          const [wandererTab] = await chrome.tabs.query({ url: '*://*wanderer*/*' });
+          if (wandererTab?.id) {
+            chrome.tabs.update(wandererTab.id, { active: true });
+          } else {
+            alert('Please open or focus your Wanderer tab to re-sync chain data.');
+          }
+        });
+      }
+    }
+
+    // 2. Synthesize Threat with AI (Gemini Nano or Heuristic Fallback)
+    const synthesis = await synthesizeZkillThreatWithAI(extraction);
+    parsedThreatSynthesis = synthesis;
+    parsedZkillData = extraction;
+    lastIngestType = 'zkill';
+
+    const elapsed = Date.now() - startTime;
+    latencyValue.textContent = `${elapsed}ms`;
+
+    // 3. Format data
+    const formattedData = formatZkillData(extraction, synthesis, crossRef, currentFormat);
+
+    // 4. Auto-copy if enabled
+    if (currentSettings?.autoCopy) {
+      await copyOutputToClipboard(formattedData, true);
+    }
+
+    // 5. Render Console Response
+    const targetName = extraction.entityName || (extraction.victim ? `${extraction.victim.name}'s loss` : 'Target');
+    const threatBadgeColor = synthesis.threatIndex >= 8 ? '#ef4444' : (synthesis.threatIndex >= 5 ? '#f59e0b' : '#10b981');
+    const threatTagBg = synthesis.threatIndex >= 8 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
+
+    outputBox.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px;">
+        <span style="color: #fff; font-weight: 700; font-size: 9.5px;">${targetName}</span>
+        <span style="background: ${threatTagBg}; color: ${threatBadgeColor}; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; border: 1px solid ${threatBadgeColor};">
+          THREAT: ${synthesis.threatIndex}/10
+        </span>
+      </div>
+      <div style="font-size: 8.5px; color: #00e5ff; margin-top: 4px;">
+        ⚡ DOCTRINE: <strong style="color: #fff;">${synthesis.doctrine}</strong> (${synthesis.gangSizeDesc})
+      </div>
+      <div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">
+        • Ships: <span style="color:#cbd5e1;">${extraction.shipsObserved?.slice(0, 5).join(', ') || 'Unknown'}</span><br>
+        • Scope: <span style="color:#cbd5e1;">${extraction.filterReason || extraction.sampleCount + ' events'}</span>
+      </div>
+      <div style="font-size: 8px; color: #f59e0b; margin-top: 4px; border-left: 2px solid ${threatBadgeColor}; padding-left: 5px;">
+        ${synthesis.precautions?.[0] || 'Maintain gate perches and D-scan vigilance.'}
+      </div>
+      <div style="margin-top: 5px; display: flex; justify-content: space-between; font-size: 7.5px; color: #64748b;">
+        <span>COPIED ${currentFormat.toUpperCase()}</span>
+        <span style="color: #00e5ff;">➔ USE QUICK ACTIONS ABOVE</span>
+      </div>
+    `;
+
+  } catch (err) {
+    console.error('Target ingestion failed:', err);
+    outputBox.innerHTML = `
+      <div style="color: #ef4444; font-weight: 700;">
+        ❌ TARGET EXTRACTION FAILED
+      </div>
+      <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+        ${err.message || String(err)}
+      </div>
+    `;
+  }
+}
+
+async function handleCopyDiscordFlash() {
+  if (!parsedZkillData) {
+    alert('No target data extracted yet. Click "Analyze Target Intel" first.');
+    return;
+  }
+  const flashReport = formatDiscordFlashReport(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef);
+  await copyOutputToClipboard(flashReport, true);
+  outputBox.innerHTML = `
+    <div style="color: #10b981; font-weight: 700; display: flex; justify-content: space-between;">
+      <span>[✓] COPIED FLASH DISCORD REPORT</span>
+      <span style="font-size: 8px; color: #00e5ff;">MARKDOWN</span>
+    </div>
+    <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${flashReport}</pre>
+    <div style="font-size: 8px; color: #64748b; margin-top: 3px;">
+      Ready to paste into Discord tactical or intel channels.
+    </div>
+  `;
+}
+
+async function handleTransmitToAstrum() {
+  if (!parsedZkillData) {
+    alert('No target data extracted yet. Click "Analyze Target Intel" first.');
+    return;
+  }
+
+  const payload = formatZkillData(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef, 'json');
+  
+  outputBox.innerHTML = `
+    <div style="color: #00e5ff; font-weight: 700;">
+      🚀 TRANSMITTING TELEMETRY TO ASTRUM INTEL...
+    </div>
+    <div style="font-size: 8px; color: #94a3b8; margin-top: 2px;">
+      Dispatching payload to http://localhost:8000/api/intel/tactical-ingest...
+    </div>
+  `;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+    const response = await fetch('http://localhost:8000/api/intel/tactical-ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: payload,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      outputBox.innerHTML = `
+        <div style="color: #10b981; font-weight: 700;">
+          [✓] TRANSMISSION CONFIRMED // ASTRUM INTEL
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+          Telemetry successfully ingested into Astrum Intel Operations Hub.
+        </div>
+      `;
+    } else {
+      throw new Error(`Server returned HTTP ${response.status}`);
+    }
+  } catch (err) {
+    outputBox.innerHTML = `
+      <div style="color: #f59e0b; font-weight: 700;">
+        ⚠️ ASTRUM API UPLINK OFFLINE
+      </div>
+      <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+        Could not reach local Astrum Intel server (${err.message || 'Connection refused'}).
+      </div>
+      <div style="font-size: 8px; color: #00e5ff; margin-top: 3px;">
+        💡 Telemetry JSON is safely copied in clipboard! Paste into Astrum Intel Ingest Modal.
+      </div>
+    `;
+    await copyOutputToClipboard(payload, false);
+  }
+}
+
+// Copy Again Button Handler
 btnCopyAgain.addEventListener('click', async () => {
-  if (lastIngestType === 'pilots' && parsedPilotsData) {
+  if (lastIngestType === 'zkill' && parsedZkillData) {
+    const text = formatZkillData(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef, currentFormat);
+    await copyOutputToClipboard(text, true);
+    btnCopyAgain.textContent = '✔ COPIED';
+    setTimeout(() => { btnCopyAgain.textContent = '📋 COPY'; }, 1500);
+  } else if (lastIngestType === 'pilots' && parsedPilotsData) {
     const text = formatPilotsData(parsedPilotsData, currentFormat);
     await copyOutputToClipboard(text, true);
     btnCopyAgain.textContent = '✔ COPIED';
@@ -593,7 +925,16 @@ for (const [fmt, btn] of Object.entries(fmtButtons)) {
   if (btn) {
     btn.addEventListener('click', async () => {
       setActiveFormat(fmt);
-      if (lastIngestType === 'pilots' && parsedPilotsData) {
+      if (lastIngestType === 'zkill' && parsedZkillData) {
+        const text = formatZkillData(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef, fmt);
+        await copyOutputToClipboard(text, true);
+        outputBox.innerHTML = `
+          <div style="color: #00e5ff; font-weight: 700;">
+            [✓] SWITCHED FORMAT: ${fmt.toUpperCase()}
+          </div>
+          <pre style="font-family: inherit; font-size: 8px; color: #cbd5e1; white-space: pre-wrap; margin: 4px 0 0 0; max-height: 80px; overflow-y: auto;">${text}</pre>
+        `;
+      } else if (lastIngestType === 'pilots' && parsedPilotsData) {
         const text = formatPilotsData(parsedPilotsData, fmt);
         await copyOutputToClipboard(text, true);
         outputBox.innerHTML = `
@@ -627,10 +968,27 @@ for (const [fmt, btn] of Object.entries(fmtButtons)) {
   }
 }
 
-// Open Test Sandbox
-lnkSandbox.addEventListener('click', (e) => {
+// Attach zKill Action Listeners
+if (btnZkillTarget) {
+  btnZkillTarget.addEventListener('click', handleIngestZkillTarget);
+}
+if (btnDiscordFlash) {
+  btnDiscordFlash.addEventListener('click', handleCopyDiscordFlash);
+}
+if (btnTransmitAstrum) {
+  btnTransmitAstrum.addEventListener('click', handleTransmitToAstrum);
+}
+
+// Open Test Sandboxes
+lnkSandbox?.addEventListener('click', (e) => {
   e.preventDefault();
   const sandboxUrl = chrome.runtime.getURL('sandbox/test-map.html');
+  chrome.tabs.create({ url: sandboxUrl });
+});
+
+lnkZkillSandbox?.addEventListener('click', (e) => {
+  e.preventDefault();
+  const sandboxUrl = chrome.runtime.getURL('sandbox/test-zkill.html');
   chrome.tabs.create({ url: sandboxUrl });
 });
 
@@ -671,3 +1029,4 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(updateTimestamp, 1000);
   verifyActiveTab();
 });
+

@@ -1,28 +1,25 @@
-# NINE LIVES Console // Tactical Extension (Wanderer Ingest with Built-in AI)
+# NINE LIVES Console // Tactical Extension (Wanderer & zKillboard Ingest with Built-in AI)
 
-A Manifest V3 Google Chrome extension that extracts EVE Online wormhole chain map topology directly from Wanderer SVG vector graphics and uses **Chrome's on-device Built-in AI (`LanguageModel` / Gemini Nano)** to parse systems, signatures, classes, statics, and pilot counts into standard **Tab-Separated Values (TSV)**, copying it directly to the system clipboard for downstream application ingestion.
+A Manifest V3 Google Chrome extension that unifies tactical intelligence across **Wanderer wormhole chain maps** and **zKillboard / Eve-Kill target killboards**. Powered by **Chrome Built-in AI (`LanguageModel` / Gemini Nano)** with deterministic heuristic fallback, it extracts systems, signatures, pilots, gang attacker compositions, and hostile doctrine profiles, cross-referencing activity with your active wormhole chain.
 
 ---
 
 ## Features
 
-- **AURA Tactical HUD**: A 360px × 480px sci-fi interface with cyber cyan, emerald, amber, and crimson accents, HUD corner brackets, scanlines, and live latency metrics derived from Stitch Project `1606960690905693982`.
-- **Wanderer SVG Map Ingest**: Intelligently inspects `<svg>` vector nodes in the active Wanderer tab without needing screenshot OCR or third-party servers.
-- **Chrome Built-in AI Parser**: Uses Chrome's local `LanguageModel` Prompt API to semantically parse and classify systems with 100% on-device privacy, zero token cost, and sub-second latency.
-- **Fixed-Column TSV Guarantee**: Solves the missing-signature and statics classification edge cases (e.g. Home system `J113907`, K-Space security status `Torrinos`, multi-statics `J121347`) by explicitly locking columns to:
-  `System \t Signature \t Class \t Tags \t Statics \t Pilots`
-  Columns never shift, ensuring seamless downstream parsing in your other application, spreadsheet, or database.
-- **Broad EVE System Designation Support**:
-  - **J-Space**: `J######` (e.g. `J101020`, `J113907`, `J142923`, `J215758`)
-  - **Nullsec Alphanumeric**: `38G6-L`, `N-K4Q0`, `U-7RBK`, `XPJ1-6`, `6-UCYU`
-  - **Named Systems**: `Jita`, `Amamake`, `Thera`, `Poitot`, `Hek`, `Dodixie`
-- **Configurable URL Verification**: Gear icon opens tactical settings to allow custom corp Wanderer domains (e.g., `https://wanderer.mycorp.com/*`), while including `http://localhost:*` by default.
-- **Offline Test Sandbox**: Includes `sandbox/test-map.html` with authentic Wanderer SVG topology, signatures tables, and local roster panels so you can test end-to-end on your laptop immediately without live corp VPN credentials.
-- **Visual Button States (All 3 Modules Fully Armed)**:
-  - `Get Wanderer Systems [W-SPACE]`: Active & armed with neon cyan HUD highlights.
-  - `Get System Signatures [SIGS]`: Active & armed with amber HUD highlights.
-  - `Get Pilots in System [LOCAL]`: Active & armed with emerald HUD highlights, automated "Ship name" checking, and hover telemetry.
-- **RAG-Searchable Technical Manual**: Detailed documentation is available in [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+- **AURA Tactical HUD**: A 360px × 480px sci-fi interface with dynamic context-aware mode switching:
+  - **W-Space Mode**: Ingest Wanderer topology, cosmic signatures, and local roster.
+  - **Target Intel Mode**: Ingest zKillboard/Eve-Kill pilot profiles, corp/alliance pages, solar systems, and individual killmail attacker gangs.
+- **Smart Dual-Cap Harvesting**: Captures all kills in the **last 12 hours** (ideal for wormhole chains) while enforcing a 10-kill historical baseline and a 20-kill ceiling to eliminate clutter.
+- **In-Extension Chain Cross-Referencing**: Caches the active Wanderer wormhole chain in extension memory and flags if a target's recent kills intersect your chain with hop distances (Home, 1 hop, 2 hops).
+- **Active Chain Staleness Guard**: Automatically warns if cached Wanderer chain data is older than 30 minutes, providing a 1-click tab switch to refresh the map.
+- **Gemini Nano Cognitive Synthesis**: Produces real-time combat threat evaluations, gang doctrine classifications (e.g. *Heavy Armor T3C Brawl + Heavy Interdiction*), and tactical wormhole precautions.
+- **Dual Discord Reporting**:
+  - **Flash Report (Popup)**: 1-click instant Discord markdown ping for fleet scouts.
+  - **Enriched Military Report (Astrum Intel)**: Comprehensive combat briefing integrating chain depth and D-Scan tags.
+- **Direct Astrum Uplink & Clipboard**: 1-click background API transmission to Astrum Intel with instant clipboard fallback.
+- **Offline Test Sandboxes**:
+  - `sandbox/test-map.html`: Mock Wanderer SVG map, signatures table, and roster.
+  - `sandbox/test-zkill.html`: Mock zKillboard pilot combat profile and single killmail attackers table.
 
 ---
 
