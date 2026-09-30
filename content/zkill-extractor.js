@@ -377,6 +377,18 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         const isFinalBlow = /final blow/i.test(row.textContent) ||
                             !!row.querySelector('.fa-crosshairs, .final-blow, .info_final_blow, img[src*="blow"]');
 
+        const FRIENDLY_CORPS = [
+          'nine lives privateering company',
+          'alterior horizons',
+          'fishworks oil exploration and cattle',
+          'ulteria horizons'
+        ];
+        const FRIENDLY_CORP_IDS = [98725353];
+        const isFriendly = (
+          (corpName && FRIENDLY_CORPS.some(fc => corpName.toLowerCase().includes(fc))) ||
+          (corpId && FRIENDLY_CORP_IDS.includes(Number(corpId)))
+        );
+
         attackers.push({
           pilotName,
           characterId: charId,
@@ -388,9 +400,22 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
           shipId,
           weaponName,
           weaponId,
-          finalBlow: isFinalBlow
+          finalBlow: isFinalBlow,
+          isFriendly
         });
       });
+
+      const FRIENDLY_CORPS = [
+        'nine lives privateering company',
+        'alterior horizons',
+        'fishworks oil exploration and cattle',
+        'ulteria horizons'
+      ];
+      const FRIENDLY_CORP_IDS = [98725353];
+      victim.isFriendly = (
+        (victim.corp && FRIENDLY_CORPS.some(fc => victim.corp.toLowerCase().includes(fc))) ||
+        (victim.corpId && FRIENDLY_CORP_IDS.includes(Number(victim.corpId)))
+      );
 
       const isEveKill = currentUrl.includes('eve-kill') || currentUrl.includes('evekill');
       const source = isEveKill ? 'eve-kill' : 'zkillboard';

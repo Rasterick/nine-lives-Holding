@@ -818,8 +818,8 @@ async function handleIngestZkillTarget() {
 
 async function handleCopyDiscordFlash() {
   if (!parsedZkillData) {
-    alert('No target data extracted yet. Click "Analyze Target Intel" first.');
-    return;
+    await handleIngestZkillTarget();
+    if (!parsedZkillData) return;
   }
   const flashReport = formatDiscordFlashReport(parsedZkillData, parsedThreatSynthesis, parsedChainCrossRef);
   await copyOutputToClipboard(flashReport, true);
@@ -837,8 +837,8 @@ async function handleCopyDiscordFlash() {
 
 async function handleTransmitToAstrum() {
   if (!parsedZkillData) {
-    alert('No target data extracted yet. Click "Analyze Target Intel" first.');
-    return;
+    await handleIngestZkillTarget();
+    if (!parsedZkillData) return;
   }
 
   let payloadObj = null;
