@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NINE LIVES Console - Tactical Ingest",
-  "version": "1.0.0",
-  "description": "Tactical Wanderer wormhole map ingest powered by Chrome Built-in AI",
+  "version": "1.5.0",
+  "description": "Tactical Wanderer wormhole map & universal zKillboard / Eve-Kill intelligence ingest",
   "permissions": [
     "tabs",
     "scripting",
