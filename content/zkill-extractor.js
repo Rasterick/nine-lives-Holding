@@ -57,6 +57,10 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
     if (!entityName && pageTitle) {
       entityName = pageTitle.split('|')[0].split('-')[0].trim();
     }
+    // Clean up entity name if it contains pipes
+    if (entityName.includes('|')) {
+      entityName = entityName.split('|')[0].trim();
+    }
 
     // Try extracting corp/alliance affiliation if available on profile pages
     let entityCorp = '';
@@ -64,18 +68,22 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
     let entityAlliance = '';
     let entityAllianceId = null;
 
-    const corpLink = doc.querySelector('a[href*="/corporation/"]');
-    if (corpLink) {
-      entityCorp = clean(corpLink.textContent);
-      const m = corpLink.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
-      if (m) entityCorpId = parseInt(m[1], 10);
-    }
+    if (entityType === 'system') {
+      entityCorp = 'Solar System (J-Space)';
+    } else {
+      const corpLink = doc.querySelector('a[href*="/corporation/"]');
+      if (corpLink) {
+        entityCorp = clean(corpLink.textContent);
+        const m = corpLink.getAttribute('href')?.match(/\/corporation\/(\d+)/i);
+        if (m) entityCorpId = parseInt(m[1], 10);
+      }
 
-    const allianceLink = doc.querySelector('a[href*="/alliance/"]');
-    if (allianceLink) {
-      entityAlliance = clean(allianceLink.textContent);
-      const m = allianceLink.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
-      if (m) entityAllianceId = parseInt(m[1], 10);
+      const allianceLink = doc.querySelector('a[href*="/alliance/"]');
+      if (allianceLink) {
+        entityAlliance = clean(allianceLink.textContent);
+        const m = allianceLink.getAttribute('href')?.match(/\/alliance\/(\d+)/i);
+        if (m) entityAllianceId = parseInt(m[1], 10);
+      }
     }
 
     // Helper: Parse timestamps from table row or element
@@ -276,6 +284,10 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
         systemName = clean(sysLink.textContent);
         const m = sysLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
         if (m) systemId = parseInt(m[1], 10);
+      }
+      if ((!systemName || /^\d+$/.test(systemName)) && entityType === 'system') {
+        systemName = entityName;
+        systemId = entityId;
       }
 
       // Ship
