@@ -15,6 +15,18 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       return (str || '').replace(/\s+/g, ' ').trim();
     }
 
+    function cleanSystemName(str) {
+      if (!str) return '';
+      let s = clean(str);
+      // Remove security status in parentheses e.g. "Goudiyah (0.1)" -> "Goudiyah"
+      s = s.replace(/\s*\([^)]*\)/g, '');
+      // Remove trailing security decimals e.g. "Goudiyah 0.1" or "Goudiyah -0.4"
+      s = s.replace(/\s+[-+]?\d*\.?\d+$/, '');
+      // Remove trailing region/dash/slash e.g. "Goudiyah - Black Rise" or "Goudiyah / Black Rise"
+      s = s.replace(/\s*[-–/]\s*.*$/, '');
+      return s.trim();
+    }
+
     const currentUrl = (typeof window !== 'undefined' ? window.location.href : '') || doc.location?.href || '';
     const currentPath = (typeof window !== 'undefined' ? window.location.pathname : '') || doc.location?.pathname || '';
 
@@ -60,6 +72,9 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
     // Clean up entity name if it contains pipes
     if (entityName.includes('|')) {
       entityName = entityName.split('|')[0].trim();
+    }
+    if (entityType === 'system' && entityName) {
+      entityName = cleanSystemName(entityName);
     }
 
     // Try extracting corp/alliance affiliation if available on profile pages
@@ -213,7 +228,7 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
           const sRow = sysCell.closest('tr') || sysCell.parentElement;
           const sLink = sRow?.querySelector('a[href*="/system/"]');
           if (sLink && !solarSystem) {
-            solarSystem = clean(sLink.textContent).split('(')[0].trim();
+            solarSystem = cleanSystemName(sLink.textContent);
             const m = sLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
             if (m) solarSystemId = parseInt(m[1], 10);
           }
@@ -226,7 +241,7 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       if (!solarSystem) {
         const sysLink = doc.querySelector('a[href*="/system/"]');
         if (sysLink) {
-          solarSystem = clean(sysLink.textContent).split('(')[0].trim();
+          solarSystem = cleanSystemName(sysLink.textContent);
           const m = sysLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
           if (m) solarSystemId = parseInt(m[1], 10);
         }
@@ -575,12 +590,12 @@ export async function extractZkillData(doc = (typeof document !== 'undefined' ? 
       let systemId = null;
       const sysLink = row.querySelector('a[href*="/system/"]');
       if (sysLink) {
-        systemName = clean(sysLink.textContent);
+        systemName = cleanSystemName(sysLink.textContent);
         const m = sysLink.getAttribute('href')?.match(/\/system\/(\d+)/i);
         if (m) systemId = parseInt(m[1], 10);
       }
       if ((!systemName || /^\d+$/.test(systemName)) && entityType === 'system') {
-        systemName = entityName;
+        systemName = cleanSystemName(entityName);
         systemId = entityId;
       }
 
