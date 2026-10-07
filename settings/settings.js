@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const settings = await getSettings();
   txtUrlPatterns.value = (settings.wandererUrlPatterns || []).join('\n');
-  txtAstrumApiUrl.value = settings.astrumApiUrl || 'http://localhost:8000/api/intel/tactical-ingest';
-  txtAstrumChainGraphUrl.value = settings.astrumChainGraphUrl || (txtAstrumApiUrl.value ? txtAstrumApiUrl.value.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'http://localhost:8000/api/intel/chain-graph/sync');
+  txtAstrumApiUrl.value = settings.astrumApiUrl || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest';
+  txtAstrumChainGraphUrl.value = settings.astrumChainGraphUrl || (txtAstrumApiUrl.value ? txtAstrumApiUrl.value.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'https://astrum.grim-horizon.org/api/intel/chain-graph/sync');
   selFormat.value = settings.defaultFormat || 'tsv';
   chkAutoCopy.checked = !!settings.autoCopy;
 
@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       .map(p => p.trim())
       .filter(p => p.length > 0);
 
-    const ingestUrl = txtAstrumApiUrl.value.trim() || 'http://localhost:8000/api/intel/tactical-ingest';
-    const chainGraphUrl = txtAstrumChainGraphUrl.value.trim() || (ingestUrl ? ingestUrl.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'http://localhost:8000/api/intel/chain-graph/sync');
+    const ingestUrl = txtAstrumApiUrl.value.trim() || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest';
+    const chainGraphUrl = txtAstrumChainGraphUrl.value.trim() || (ingestUrl ? ingestUrl.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'https://astrum.grim-horizon.org/api/intel/chain-graph/sync');
 
     const updated = {
       ...settings,
