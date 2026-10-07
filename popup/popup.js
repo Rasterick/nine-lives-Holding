@@ -61,6 +61,7 @@ const btnCloseSettings = document.getElementById('btnCloseSettings');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 const txtUrlPatterns = document.getElementById('txtUrlPatterns');
 const txtAstrumApiUrl = document.getElementById('txtAstrumApiUrl');
+const txtAstrumChainGraphUrl = document.getElementById('txtAstrumChainGraphUrl');
 const selDefaultFormat = document.getElementById('selDefaultFormat');
 const chkAutoCopy = document.getElementById('chkAutoCopy');
 
@@ -1173,7 +1174,8 @@ lnkZkillSandbox?.addEventListener('click', (e) => {
 btnSettings.addEventListener('click', async () => {
   currentSettings = await getSettings();
   txtUrlPatterns.value = (currentSettings.wandererUrlPatterns || []).join('\n');
-  txtAstrumApiUrl.value = currentSettings.astrumApiUrl || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest';
+  txtAstrumApiUrl.value = currentSettings.astrumApiUrl || 'http://localhost:8000/api/intel/tactical-ingest';
+  txtAstrumChainGraphUrl.value = currentSettings.astrumChainGraphUrl || (txtAstrumApiUrl.value ? txtAstrumApiUrl.value.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'http://localhost:8000/api/intel/chain-graph/sync');
   selDefaultFormat.value = currentSettings.defaultFormat || 'tsv';
   chkAutoCopy.checked = !!currentSettings.autoCopy;
   settingsDrawer.classList.remove('hidden');
@@ -1189,10 +1191,14 @@ btnSaveSettings.addEventListener('click', async () => {
     .map(p => p.trim())
     .filter(p => p.length > 0);
 
+  const ingestUrl = txtAstrumApiUrl.value.trim() || 'http://localhost:8000/api/intel/tactical-ingest';
+  const chainGraphUrl = txtAstrumChainGraphUrl.value.trim() || (ingestUrl ? ingestUrl.replace(/\/tactical-ingest.*$/i, '/chain-graph/sync') : 'http://localhost:8000/api/intel/chain-graph/sync');
+
   const newSettings = {
     ...currentSettings,
     wandererUrlPatterns: patterns.length > 0 ? patterns : currentSettings.wandererUrlPatterns,
-    astrumApiUrl: txtAstrumApiUrl.value.trim() || 'https://astrum.grim-horizon.org/api/intel/tactical-ingest',
+    astrumApiUrl: ingestUrl,
+    astrumChainGraphUrl: chainGraphUrl,
     defaultFormat: selDefaultFormat.value,
     autoCopy: chkAutoCopy.checked
   };
