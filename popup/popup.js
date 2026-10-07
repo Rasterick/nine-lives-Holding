@@ -2,6 +2,7 @@
 import { getSettings, saveSettings } from '../lib/storage.js';
 import { parseWithChromeAI, formatTacticalData, synthesizeZkillThreatWithAI } from '../lib/ai.js';
 import { extractWandererSvgData } from '../content/extractor.js';
+import { extractWandererTopology } from '../content/topology-extractor.js';
 import { extractWandererSignatures } from '../content/signatures-extractor.js';
 import { extractWandererPilots } from '../content/pilots-extractor.js';
 import { extractZkillData } from '../content/zkill-extractor.js';
@@ -43,6 +44,7 @@ const zkillActions = document.getElementById('zkillActions');
 const btnSystems = document.getElementById('btnSystems');
 const btnSignatures = document.getElementById('btnSignatures');
 const btnPilots = document.getElementById('btnPilots');
+const btnSyncChainGraph = document.getElementById('btnSyncChainGraph');
 
 // UI Elements - zKillboard
 const btnZkillTarget = document.getElementById('btnZkillTarget');
@@ -655,6 +657,133 @@ if (btnPilots) {
       `;
     }
   });
+}
+
+// Handle Tactical Chain Graph Sync (Nodes + Edges)
+async function handleSyncChainGraph() {
+  if (!currentTab?.id) {
+    alert('No active tab identified. Please navigate to Wanderer.');
+    return;
+  }
+
+  const startTime = Date.now();
+  updateTimestamp();
+
+  outputBox.innerHTML = `
+    <div style="color: #6366f1; font-weight: 700;">
+      ◈ EXTRACTING WANDERER GRAPH TOPOLOGY...
+    </div>
+    <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+      Querying React-Flow system nodes, edge connections, and mass classes...
+    </div>
+  `;
+
+  try {
+    let extraction = null;
+
+    if (currentTab.url && currentTab.url.startsWith('chrome-extension://')) {
+      try {
+        extraction = await chrome.tabs.sendMessage(currentTab.id, { action: 'EXTRACT_WANDERER_TOPOLOGY' });
+      } catch (e) {
+        extraction = extractWandererTopology();
+      }
+    } else {
+      const execResults = await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id, allFrames: true },
+        func: extractWandererTopology
+      });
+
+      const successful = execResults?.find(r => r.result?.success && r.result?.nodes?.length > 0);
+      extraction = successful?.result || execResults?.[0]?.result;
+    }
+
+    if (!extraction || !extraction.success || !extraction.nodes?.length) {
+      outputBox.innerHTML = `
+        <div style="color: #ef4444; font-weight: 700;">
+          [!] GRAPH EXTRACTION FAILED
+        </div>
+        <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+          No system nodes found on current Wanderer canvas. Please ensure Wanderer map is loaded.
+        </div>
+      `;
+      return;
+    }
+
+    const payload = {
+      timestamp: extraction.timestamp,
+      source_app: extraction.source_app || 'Wanderer',
+      nodes: extraction.nodes,
+      edges: extraction.edges
+    };
+
+    // 1. Copy JSON to clipboard as tactical fallback
+    const jsonStr = JSON.stringify(payload, null, 2);
+    if (currentSettings?.autoCopy !== false) {
+      await copyOutputToClipboard(jsonStr, true);
+    }
+
+    // 2. Transmit directly to Astrum-Intel API
+    const targetUrl = currentSettings?.astrumChainGraphUrl || 'http://localhost:8000/api/intel/chain-graph/sync';
+    let transmitStatus = 'NOT_TRANSMITTED';
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: jsonStr
+      });
+
+      if (response.ok) {
+        const respData = await response.json();
+        transmitStatus = 'SYNCED_OK';
+      } else {
+        transmitStatus = `API_ERROR_${response.status}`;
+      }
+    } catch (netErr) {
+      console.warn('Direct HTTP POST to Astrum-Intel failed (may be offline or CORS):', netErr);
+      transmitStatus = 'NETWORK_FALLBACK_COPIED';
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (latencyValue) latencyValue.textContent = `${elapsed}ms`;
+
+    const statusBadgeHtml = transmitStatus === 'SYNCED_OK'
+      ? `<span style="font-size: 8px; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 1px 5px; border-radius: 3px;">✔ TRANSMITTED TO ASTRUM INTEL</span>`
+      : `<span style="font-size: 8px; background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); padding: 1px 5px; border-radius: 3px;">📋 COPIED TO CLIPBOARD (${transmitStatus})</span>`;
+
+    outputBox.innerHTML = `
+      <div style="color: #818cf8; font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+        <span>[✓] CHAIN TOPOLOGY SYNCED</span>
+        ${statusBadgeHtml}
+      </div>
+      <div style="font-size: 8.5px; color: #cbd5e1; margin-top: 4px;">
+        Extracted <strong>${extraction.nodes.length} nodes</strong> and <strong>${extraction.edges.length} wormhole edges</strong> in ${elapsed}ms.
+      </div>
+      <div style="margin-top: 6px; padding: 4px 6px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 4px; font-size: 8px; color: #a5b4fc; display: flex; gap: 8px;">
+        <span>🌐 Nodes: <strong>${extraction.nodes.length}</strong></span>
+        <span>🔗 Edges: <strong>${extraction.edges.length}</strong></span>
+        <span>⚡ Mass: <strong>${extraction.edges.map(e => e.mass).join(', ') || 'N/A'}</strong></span>
+      </div>
+    `;
+
+  } catch (err) {
+    console.error('Chain graph sync failed:', err);
+    outputBox.innerHTML = `
+      <div style="color: #ef4444; font-weight: 700;">
+        ❌ TOPOLOGY EXTRACTION ERROR
+      </div>
+      <div style="font-size: 8.5px; color: #94a3b8; margin-top: 4px;">
+        ${err.message || 'An unexpected error occurred during Wanderer graph parsing.'}
+      </div>
+    `;
+  }
+}
+
+if (btnSyncChainGraph) {
+  btnSyncChainGraph.addEventListener('click', handleSyncChainGraph);
 }
 
 // Handle zKillboard Target Ingestion

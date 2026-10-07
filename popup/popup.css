@@ -326,6 +326,18 @@ body {
   color: var(--aura-emerald);
 }
 
+.glyph-indigo {
+  background: rgba(129, 140, 248, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  color: #a5b4fc;
+}
+
+.tactical-btn.btn-active:hover .glyph-indigo {
+  background: rgba(129, 140, 248, 0.3);
+  border-color: #818cf8;
+  color: #c7d2fe;
+}
+
 .action-glyph svg {
   width: 16px;
   height: 16px;
@@ -356,6 +368,7 @@ body {
 .tag-cyan { color: var(--aura-cyan); }
 .tag-amber { color: var(--aura-amber); }
 .tag-emerald { color: var(--aura-emerald); }
+.tag-indigo { color: #a5b4fc; }
 
 .standby-badge {
   font-size: 8px;
@@ -425,6 +438,15 @@ body {
 .tactical-btn.btn-active:hover .dot-emerald {
   background: var(--aura-emerald);
   box-shadow: 0 0 6px var(--aura-emerald);
+}
+
+.dot-indigo {
+  background: rgba(129, 140, 248, 0.4);
+}
+
+.tactical-btn.btn-active:hover .dot-indigo {
+  background: #818cf8;
+  box-shadow: 0 0 6px #818cf8;
 }
 
 /* Format Ribbon */
