@@ -40,7 +40,7 @@ export function extractWandererSvgData() {
     'RANCER', 'TAMA', 'NIARJA', 'B-R5RB', 'M-OEE8', 'V-3YG7',
     'ORDUIN', 'LOGUTTUR', 'MERCOMESIER', 'ZORORZIH', 'AIKANTOH', 'APANAKE',
     'PAKHSHI', 'KASSIGAINEN', 'LIBERATED BARBICAN', 'BARBICAN', 'VIDETTE',
-    'REDOUBT', 'SENTINEL', 'CONFLUX'
+    'REDOUBT', 'SENTINEL', 'CONFLUX', 'RESET'
   ]);
 
   function isSystemIdentifier(token) {
@@ -113,7 +113,7 @@ export function extractWandererSvgData() {
     for (const el of leafEls) {
       const txt = cleanToken(el.textContent);
       // Skip empty, overly long smashed strings, or UI buttons
-      if (!txt || txt.length > 25 || /^(zoom|reset|search|filter|\+|\-)$/i.test(txt)) continue;
+      if (!txt || txt.length > 120 || /^(zoom|search|filter|\+|\-)$/i.test(txt)) continue;
       if (txt.length > 10 && /[A-Z]{3,}\d{2,}/.test(txt) && !jSpaceRegex.test(txt)) continue;
       leafTokens.push(txt);
     }
@@ -121,19 +121,40 @@ export function extractWandererSvgData() {
     // Support SVG text / tspan
     const svgTexts = Array.from(container.querySelectorAll('text, tspan'))
       .map(el => cleanToken(el.textContent))
-      .filter(t => t.length > 0 && t.length < 25);
+      .filter(t => t.length > 0 && t.length < 120);
     for (const t of svgTexts) leafTokens.push(t);
 
     // Identify system anchor in leaf tokens
     let sysName = null;
     for (const t of leafTokens) {
+      let candidate = t;
+      if (t.includes(' - ')) {
+        candidate = t.split(' - ')[0].trim();
+      } else if (t.includes(' — ')) {
+        candidate = t.split(' — ')[0].trim();
+      }
+
       const clean = t.toUpperCase();
+      const candClean = candidate.toUpperCase();
+
+      if (jSpaceRegex.test(candClean)) {
+        sysName = candClean.match(jSpaceRegex)[1].toUpperCase();
+        break;
+      }
       if (jSpaceRegex.test(clean)) {
         sysName = clean.match(jSpaceRegex)[1].toUpperCase();
         break;
       }
+      if (namedSystems.has(candClean)) {
+        sysName = candidate;
+        break;
+      }
       if (namedSystems.has(clean)) {
         sysName = t; // preserve casing
+        break;
+      }
+      if (isNullsecSystem(candClean)) {
+        sysName = candClean;
         break;
       }
       if (isNullsecSystem(clean)) {
@@ -145,18 +166,25 @@ export function extractWandererSvgData() {
     // Dynamic fallback for any K-Space solar system name on a map node
     if (!sysName) {
       for (const t of leafTokens) {
-        const clean = t.toUpperCase();
+        let candidate = t;
+        if (t.includes(' - ')) {
+          candidate = t.split(' - ')[0].trim();
+        } else if (t.includes(' — ')) {
+          candidate = t.split(' — ')[0].trim();
+        }
+
+        const candClean = candidate.toUpperCase();
         if (
-          /^[A-Z][a-zA-Z0-9\-\'\s]{2,20}$/.test(t) &&
-          !/^(1\.0|0\.[0-9])$/.test(t) &&
-          !classRegex.test(clean) &&
-          !threeLetterSigRegex.test(clean) &&
-          !cosmicSigFullRegex.test(clean) &&
-          !/^([A-Z]\d*(\.\d+)?|[A-Z]{1,2}|\d+\.\d+|\[.*?\])$/i.test(t) &&
-          !EVE_REGIONS.has(clean) &&
-          !['AND', 'THE', 'FOR', 'OUT', 'NEW', 'SEC', 'MAP', 'SYSTEM', 'NODE', 'STATUS', 'TIMER'].includes(clean)
+          /^[A-Z][a-zA-Z0-9\-\'\s]{2,20}$/.test(candidate) &&
+          !/^(1\.0|0\.[0-9])$/.test(candidate) &&
+          !classRegex.test(candClean) &&
+          !threeLetterSigRegex.test(candClean) &&
+          !cosmicSigFullRegex.test(candClean) &&
+          !/^([A-Z]\d*(\.\d+)?|[A-Z]{1,2}|\d+\.\d+|\[.*?\])$/i.test(candidate) &&
+          !EVE_REGIONS.has(candClean) &&
+          !['AND', 'THE', 'FOR', 'OUT', 'NEW', 'SEC', 'MAP', 'SYSTEM', 'NODE', 'STATUS', 'TIMER'].includes(candClean)
         ) {
-          sysName = t;
+          sysName = candidate;
           break;
         }
       }

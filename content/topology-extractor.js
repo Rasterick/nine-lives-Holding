@@ -26,7 +26,7 @@ export function extractWandererTopology() {
     'RANCER', 'TAMA', 'NIARJA', 'B-R5RB', 'M-OEE8', 'V-3YG7',
     'ORDUIN', 'LOGUTTUR', 'MERCOMESIER', 'ZORORZIH', 'AIKANTOH', 'APANAKE',
     'PAKHSHI', 'KASSIGAINEN', 'LIBERATED BARBICAN', 'BARBICAN', 'VIDETTE',
-    'REDOUBT', 'SENTINEL', 'CONFLUX'
+    'REDOUBT', 'SENTINEL', 'CONFLUX', 'RESET'
   ]);
 
   function cleanToken(t) {
@@ -88,26 +88,63 @@ export function extractWandererTopology() {
       const leafTokens = [];
       for (const el of leafEls) {
         const txt = cleanToken(el.textContent);
-        if (!txt || txt.length > 30 || /^(zoom|reset|search|filter|\+|\-)$/i.test(txt)) continue;
+        if (!txt || txt.length > 120 || /^(zoom|search|filter|\+|\-)$/i.test(txt)) continue;
         leafTokens.push(txt);
       }
 
       // SVG text
       const svgTexts = Array.from(container.querySelectorAll('text, tspan'))
         .map(el => cleanToken(el.textContent))
-        .filter(t => t.length > 0 && t.length < 30);
+        .filter(t => t.length > 0 && t.length < 120);
       for (const t of svgTexts) leafTokens.push(t);
 
-      // Resolve System Name
+      // Resolve System Name & Custom Corp/Hostile Alias
       let sysName = null;
+      let customName = null;
+
       for (const t of leafTokens) {
+        let candidate = t;
+        let note = null;
+        if (t.includes(' - ')) {
+          const parts = t.split(' - ');
+          candidate = parts[0].trim();
+          note = parts.slice(1).join(' - ').trim();
+        } else if (t.includes(' — ')) {
+          const parts = t.split(' — ');
+          candidate = parts[0].trim();
+          note = parts.slice(1).join(' — ').trim();
+        }
+
         const clean = t.toUpperCase();
+        const candClean = candidate.toUpperCase();
+
+        // 1. J-space check
+        if (jSpaceRegex.test(candClean)) {
+          sysName = candClean.match(jSpaceRegex)[1].toUpperCase();
+          if (note) customName = note;
+          break;
+        }
         if (jSpaceRegex.test(clean)) {
           sysName = clean.match(jSpaceRegex)[1].toUpperCase();
+          if (note) customName = note;
+          break;
+        }
+
+        // 2. Named system check
+        if (namedSystems.has(candClean)) {
+          sysName = candidate;
+          if (note) customName = note;
           break;
         }
         if (namedSystems.has(clean)) {
           sysName = t;
+          break;
+        }
+
+        // 3. Nullsec system check
+        if (isNullsecSystem(candClean)) {
+          sysName = candClean;
+          if (note) customName = note;
           break;
         }
         if (isNullsecSystem(clean)) {
@@ -119,27 +156,41 @@ export function extractWandererTopology() {
       // K-Space fallback
       if (!sysName) {
         for (const t of leafTokens) {
-          const clean = t.toUpperCase();
+          let candidate = t;
+          let note = null;
+          if (t.includes(' - ')) {
+            const parts = t.split(' - ');
+            candidate = parts[0].trim();
+            note = parts.slice(1).join(' - ').trim();
+          }
+
+          const candClean = candidate.toUpperCase();
           if (
-            /^[A-Z][a-zA-Z0-9\-\'\s]{2,20}$/.test(t) &&
-            !/^(1\.0|0\.[0-9]|-0\.[0-9])$/.test(t) &&
-            !classRegex.test(clean) &&
-            !threeLetterSigRegex.test(clean) &&
-            !cosmicSigFullRegex.test(clean) &&
-            !['AND', 'THE', 'FOR', 'OUT', 'NEW', 'SEC', 'MAP', 'SYSTEM', 'NODE'].includes(clean)
+            /^[A-Z][a-zA-Z0-9\-\'\s]{2,20}$/.test(candidate) &&
+            !/^(1\.0|0\.[0-9]|-0\.[0-9])$/.test(candidate) &&
+            !classRegex.test(candClean) &&
+            !threeLetterSigRegex.test(candClean) &&
+            !cosmicSigFullRegex.test(candClean) &&
+            !['AND', 'THE', 'FOR', 'OUT', 'NEW', 'SEC', 'MAP', 'SYSTEM', 'NODE'].includes(candClean)
           ) {
-            sysName = t;
+            sysName = candidate;
+            if (note) customName = note;
             break;
           }
         }
+      }
+
+      // Final fallback: If sysName couldn't be parsed from text, but nodeId is numeric solarSystemID
+      if (!sysName && /^\d{7,9}$/.test(nodeId)) {
+        sysName = nodeId;
       }
 
       if (!sysName) continue;
 
       const isHome = sysName.toUpperCase() === 'J215758' || 
                      sysName.toUpperCase() === 'J113907' || 
-                     container.classList.contains('home') ||
-                     container.innerHTML.includes('PG');
+                     container.classList?.contains('home') ||
+                     container.innerHTML?.includes('PG');
 
       // 3-Letter Signature
       let signature = '-';
@@ -295,6 +346,7 @@ export function extractWandererTopology() {
       const nodeObj = {
         id: nodeId,
         name: sysName,
+        custom_name: customName || undefined,
         signature: signature,
         class: sysClass || (sysName.startsWith('J') ? 'WH' : 'K-Space'),
         tag: customTag,
