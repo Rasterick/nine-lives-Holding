@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NINE LIVES Console - Tactical Ingest",
-  "version": "1.7.0",
-  "description": "Tactical Wanderer wormhole map & universal zKillboard / Eve-Kill intelligence ingest",
+  "version": "1.8.0",
+  "description": "Tactical Wanderer wormhole map, universal zKillboard / Eve-Kill intelligence & EveTools Battle Report ingest",
   "permissions": [
     "tabs",
     "scripting",
@@ -11,6 +11,13 @@
   ],
   "host_permissions": [
     "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://br.evetools.org/br/*"],
+      "js": ["content/evetools-extractor.js"],
+      "run_at": "document_idle"
+    }
   ],
   "action": {
     "default_popup": "popup/popup.html",
